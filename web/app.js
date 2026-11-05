@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Akreditasi RAG — browser client
+   DJP RAG — browser client
    ==========================================================================
    Organised as small classes, each owning one region of the interface:
 
@@ -1006,7 +1006,7 @@ class StatusPanel {
     }
     const indicatorClass = backend.is_available ? 'online' : 'offline';
     const escaper = new HtmlEscaper();
-    // Sending internal accreditation excerpts off-machine is a decision the
+    // Sending document excerpts off-machine is a decision the
     // operator should make knowingly, so it is stated on the control itself.
     const privacyNote = backend.runs_locally
       ? '<span class="privacy-note local">Dokumen tidak meninggalkan komputer ini</span>'
@@ -1087,7 +1087,7 @@ class IngestPanel {
     const confirmed = window.confirm(
       'Bangun ulang indeks dari nol?\n\n' +
       'Seluruh indeks akan dihapus dan semua dokumen dibaca ulang. ' +
-      'Dokumen sumber di Google Drive TIDAK akan diubah.'
+      'Salinan pajak.go.id di corpus-pajak TIDAK akan diubah.'
     );
     if (confirmed) await this.#start(true);
   }
@@ -1349,7 +1349,7 @@ class AnswerRenderer {
       .join('');
     const ocrBadge = citation.produced_by_ocr ? '<span class="badge ocr">OCR</span>' : '';
 
-    // Where a passage names an external page — a SINTA or Scholar profile —
+    // Where a passage names an external page — the pajak.go.id original —
     // that live page is what the reader actually wants, not the local copy.
     const externalLinks = (citation.external_links || [])
       .map((link) =>
@@ -2096,7 +2096,7 @@ class SidebarController {
   static NARROW_SCREEN_QUERY = '(max-width: 960px)';
 
   /** Browser-storage key for the wide-screen collapsed preference. */
-  static STORAGE_KEY = 'akreditasi-rag.sidebar-collapsed';
+  static STORAGE_KEY = 'djp-rag.sidebar-collapsed';
 
   constructor() {
     this.layout = document.getElementById('layout');

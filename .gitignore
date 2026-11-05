@@ -23,6 +23,9 @@ data/
 # halaman SINTA/Scholar/PDDikti. Sumber aslinya tetap di shared drive, dan
 # isinya dapat dibuat ulang dengan `main.py snapshot`.
 corpus-lokal/
+# corpus-pajak memuat salinan halaman dan lampiran pajak.go.id (±1,4 GB).
+# Isinya dapat dibuat ulang dengan `main.py crawl --full`.
+corpus-pajak/
 
 # --- Lingkungan dan cache Python ---------------------------------------------
 .venv/

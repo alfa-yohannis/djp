@@ -176,7 +176,7 @@ class AuthenticationService:
     """Checks credentials and turns them into session tokens."""
 
     #: Name of the cookie carrying the session token.
-    COOKIE_NAME = "akreditasi_session"
+    COOKIE_NAME = "djp_session"
 
     def __init__(self, settings: Settings) -> None:
         """Load the signing secret and the account credentials from configuration."""

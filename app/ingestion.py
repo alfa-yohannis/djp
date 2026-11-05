@@ -8,12 +8,15 @@ unchanged corpus finishes in seconds instead of re-embedding 700 files.
 
 :class:`IngestionRunner` hosts the pipeline on a background thread and exposes
 :class:`IngestionProgress`, which the web interface polls to draw its progress
-bar. Nothing here ever opens a corpus file for writing — all reads funnel
+bar. :class:`AutomaticIngestion` starts that runner by itself whenever the
+corpus changes, so crawled pages become searchable while the crawl is still
+going. Nothing here ever opens a corpus file for writing — all reads funnel
 through the read-only guard.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import threading
 import time
@@ -367,6 +370,19 @@ class IngestionPipeline:
             self.progress.finish(error_message=f"{type(error).__name__}: {error}")
             raise
 
+    def corpus_fingerprint(self) -> str:
+        """Digest of every indexable file's path, size and modification time.
+
+        Only directory entries are read, never file contents, so it is cheap
+        enough to take every minute. Two equal digests mean an incremental run
+        would find nothing to do.
+        """
+        digest = hashlib.sha1()
+        for document in self._scanner.scan():
+            line = f"{document.relative_path}\0{document.content_signature}\n"
+            digest.update(line.encode("utf-8", "replace"))
+        return digest.hexdigest()
+
     def _execute(self, force_full_rebuild: bool) -> dict:
         """Run the five ingest steps in order."""
         self._last_flush_document_count = 0
@@ -622,7 +638,7 @@ class IngestionRunner:
             self._worker_thread = threading.Thread(
                 target=self._run_pipeline,
                 args=(force_full_rebuild,),
-                name="akreditasi-ingest",
+                name="djp-ingest",
                 daemon=True,
             )
             self._worker_thread.start()
@@ -644,6 +660,73 @@ class IngestionRunner:
         return self._pipeline.progress.as_dictionary()
 
 
+class AutomaticIngestion:
+    """Indexes on its own whenever the corpus changes, while the server runs.
+
+    The crawler keeps adding pajak.go.id pages to the corpus. Without this they
+    would stay unsearchable until someone pressed "Perbarui indeks". Every
+    ``interval_seconds`` the corpus is fingerprinted and, when the fingerprint
+    differs from the one last handed to a run, an incremental run starts on the
+    shared runner. Sharing the runner with the button means the two never
+    overlap, and because the run happens inside the server process, its
+    in-memory vectors are current the moment the run ends.
+    """
+
+    def __init__(
+        self, pipeline: IngestionPipeline, runner: IngestionRunner, interval_seconds: float
+    ) -> None:
+        """Bind the watcher to the pipeline it fingerprints and the runner it starts."""
+        self._pipeline = pipeline
+        self._runner = runner
+        self._interval_seconds = interval_seconds
+        #: Fingerprint of the corpus as the last started run saw it. None until
+        #: the first check, so the first check always runs once to catch up on
+        #: anything added while the server was down.
+        self._indexed_fingerprint: str | None = None
+        self._stop_event = threading.Event()
+        self._worker_thread: threading.Thread | None = None
+
+    def start(self) -> bool:
+        """Begin watching; False when switched off (interval 0) or already started."""
+        if self._interval_seconds <= 0 or self._worker_thread is not None:
+            return False
+        self._stop_event.clear()
+        self._worker_thread = threading.Thread(
+            target=self._watch, name="djp-auto-ingest", daemon=True
+        )
+        self._worker_thread.start()
+        LOGGER.info(
+            "Indexing otomatis aktif: korpus diperiksa tiap %s detik", self._interval_seconds
+        )
+        return True
+
+    def stop(self) -> None:
+        """Stop watching; a run already in progress is left to finish."""
+        self._stop_event.set()
+        self._worker_thread = None
+
+    def check_once(self) -> bool:
+        """Start a run if the corpus changed since the last one; True when started."""
+        if self._runner.is_running:
+            return False
+        fingerprint = self._pipeline.corpus_fingerprint()
+        if fingerprint == self._indexed_fingerprint:
+            return False
+        if not self._runner.start():
+            return False
+        self._indexed_fingerprint = fingerprint
+        LOGGER.info("Korpus berubah; indexing otomatis dimulai")
+        return True
+
+    def _watch(self) -> None:
+        """Thread body: check the corpus every interval until stopped."""
+        while not self._stop_event.wait(self._interval_seconds):
+            try:
+                self.check_once()
+            except Exception:
+                LOGGER.exception("Pemeriksaan indexing otomatis gagal")
+
+
 #: Shared embedder used by both ingest and query paths, so weights load once.
 TEXT_EMBEDDER = TextEmbedder(SETTINGS)
 
@@ -657,3 +740,8 @@ INGESTION_PIPELINE = IngestionPipeline(
     guard=SOURCE_GUARD,
 )
 INGESTION_RUNNER = IngestionRunner(INGESTION_PIPELINE)
+
+#: Watcher the web server starts, indexing crawled pages as they arrive.
+AUTOMATIC_INGESTION = AutomaticIngestion(
+    INGESTION_PIPELINE, INGESTION_RUNNER, SETTINGS.auto_ingest_seconds
+)

@@ -596,15 +596,17 @@ class VectorIndex:
         """Atomically persist the vectors, via a temporary file and replace.
 
         The archive is written through an open file handle rather than a path:
-        given a path, ``savez_compressed`` appends its own ``.npz`` suffix, which
-        would leave the temporary file under a name the replace step cannot find.
+        given a path, ``savez`` appends its own ``.npz`` suffix, which would
+        leave the temporary file under a name the replace step cannot find.
+
+        It is stored uncompressed. Embeddings barely compress (about 8%), and
+        at 100k vectors compressing takes 20 s against 0.4 s, all of it under
+        the lock that searches wait on — while ingest saves every 25 documents.
         """
         with self._access_lock:
             temporary_path = self._archive_path.with_name(self._archive_path.name + ".tmp")
             with open(temporary_path, "wb") as archive_file:
-                np.savez_compressed(
-                    archive_file, chunk_ids=self._chunk_ids, vectors=self._vectors
-                )
+                np.savez(archive_file, chunk_ids=self._chunk_ids, vectors=self._vectors)
             temporary_path.replace(self._archive_path)
             LOGGER.info("Menyimpan %d vektor ke %s", self.size, self._archive_path)
 

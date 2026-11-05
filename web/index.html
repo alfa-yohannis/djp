@@ -5,12 +5,12 @@
   <!-- `interactive-widget` makes Chrome on Android shrink the page when the
        on-screen keyboard opens, so the question box stays above it. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-  <title>Custom-Local AI: Akreditasi Universitas — MTI 2026</title>
+  <title>Custom-Local AI: Asisten Pajak — Studi Kasus DJP</title>
   <!-- ?v= is the file's content hash. Cloudflare tells browsers to keep static
        files for 4 hours, so a changed file needs a new address to reach them:
        update the value (here and on app.js) whenever the file changes. -->
-  <link rel="stylesheet" href="/static/styles.css?v=bfe6fd29">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="stylesheet" href="/static/styles.css?v=2127044d">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
 </head>
 <body>
   <div class="layout" id="layout">
@@ -20,8 +20,8 @@
          button in the tab bar drives both (SidebarController in app.js). -->
     <aside class="sidebar" id="sidebar">
       <header class="sidebar-header">
-        <h1>Custom-Local AI <span class="title-descriptor">Akreditasi Universitas</span></h1>
-        <p class="subtitle">Magister Teknik Informatika &middot; LAM INFOKOM 2026</p>
+        <h1>Custom-Local AI <span class="title-descriptor">Asisten Pajak</span></h1>
+        <p class="subtitle">Studi kasus: informasi publik pajak.go.id</p>
         <button class="sidebar-close" id="button-sidebar-close" type="button"
                 aria-label="Tutup panel samping" title="Tutup panel samping">✕</button>
       </header>
@@ -142,13 +142,13 @@
         </div>
         <div class="conversation" id="conversation">
           <div class="welcome">
-            <h2>Tanyakan apa saja tentang dokumen akreditasi</h2>
-            <p>Jawaban selalu disertai sitasi ke dokumen sumber. Sistem hanya membaca berkas; tidak ada yang diubah di Google Drive.</p>
+            <h2>Tanyakan apa saja tentang perpajakan</h2>
+            <p>Jawaban disusun dari salinan halaman dan dokumen publik pajak.go.id, selalu disertai sitasi ke sumbernya. Ini demo, bukan layanan resmi Direktorat Jenderal Pajak.</p>
             <div class="example-questions" id="example-questions">
-              <button class="example">Berapa rata-rata beban EWMP DTPR pada TS?</button>
-              <button class="example">Apa saja kriteria pada instrumen akreditasi LAM INFOKOM untuk program magister?</button>
-              <button class="example">Sebutkan publikasi penelitian dosen beserta tahunnya.</button>
-              <button class="example">Bagaimana prosedur baku proses akreditasi?</button>
+              <button class="example">Berapa tarif PPh orang pribadi menurut UU HPP?</button>
+              <button class="example">Kode OTP tidak masuk saat daftar NPWP di Coretax, apa yang harus dilakukan?</button>
+              <button class="example">Apa saja tugas dan fungsi Direktorat Jenderal Pajak?</button>
+              <button class="example">Formulir apa yang dipakai untuk mendaftar sebagai wajib pajak badan?</button>
             </div>
           </div>
         </div>
@@ -207,6 +207,6 @@
        a CDN so the interface keeps working without internet access. -->
   <script src="/static/vendor/marked.min.js"></script>
   <script src="/static/vendor/purify.min.js"></script>
-  <script src="/static/app.js?v=9cbeeb0a"></script>
+  <script src="/static/app.js?v=38974244"></script>
 </body>
 </html>

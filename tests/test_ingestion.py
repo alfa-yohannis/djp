@@ -11,7 +11,12 @@ import numpy as np
 import pytest
 
 from app.extractors import ExtractorRegistry
-from app.ingestion import IngestionPipeline, IngestionProgress
+from app.ingestion import (
+    AutomaticIngestion,
+    IngestionPipeline,
+    IngestionProgress,
+    IngestionRunner,
+)
 from app.storage import DocumentCatalogue, VectorIndex
 
 
@@ -347,3 +352,71 @@ class TestMultipleRootsIngestion:
         pipeline.run()
         results = pipeline.catalogue.search_by_keyword("sinta scholar dosen", limit=10)
         assert any("sinta" in passage.text.lower() for passage in results)
+
+
+class StubRunner:
+    """Records start requests instead of indexing, and can pretend to be busy."""
+
+    def __init__(self) -> None:
+        """Start idle with no runs requested."""
+        self.is_running = False
+        self.starts = 0
+
+    def start(self, force_full_rebuild: bool = False) -> bool:
+        """Count the request; refuse it while busy, as the real runner does."""
+        if self.is_running:
+            return False
+        self.starts += 1
+        return True
+
+
+class TestAutomaticIngestion:
+    """Indexing on its own when the crawler adds files to the corpus."""
+
+    def test_the_first_check_catches_up(self, pipeline):
+        runner = StubRunner()
+        watcher = AutomaticIngestion(pipeline, runner, interval_seconds=60)
+        assert watcher.check_once() is True
+        assert runner.starts == 1
+
+    def test_an_unchanged_corpus_starts_nothing(self, pipeline):
+        runner = StubRunner()
+        watcher = AutomaticIngestion(pipeline, runner, interval_seconds=60)
+        watcher.check_once()
+        assert watcher.check_once() is False
+        assert runner.starts == 1
+
+    def test_a_new_file_starts_a_run(self, pipeline, sample_corpus):
+        runner = StubRunner()
+        watcher = AutomaticIngestion(pipeline, runner, interval_seconds=60)
+        watcher.check_once()
+        (sample_corpus / "tambahan.txt").write_text(
+            "Halaman baru hasil crawl tentang tarif PPh Pasal 21.", encoding="utf-8"
+        )
+        assert watcher.check_once() is True
+        assert runner.starts == 2
+
+    def test_a_busy_runner_is_left_alone(self, pipeline):
+        runner = StubRunner()
+        runner.is_running = True
+        watcher = AutomaticIngestion(pipeline, runner, interval_seconds=60)
+        assert watcher.check_once() is False
+        runner.is_running = False
+        assert watcher.check_once() is True
+
+    def test_an_interval_of_zero_switches_it_off(self, pipeline):
+        watcher = AutomaticIngestion(pipeline, StubRunner(), interval_seconds=0)
+        assert watcher.start() is False
+
+    def test_a_started_run_makes_the_new_file_searchable(self, pipeline, sample_corpus):
+        runner = IngestionRunner(pipeline)
+        watcher = AutomaticIngestion(pipeline, runner, interval_seconds=60)
+        watcher.check_once()
+        runner._worker_thread.join(timeout=60)
+        (sample_corpus / "tambahan.txt").write_text(
+            "Halaman baru hasil crawl tentang tarif PPh Pasal 21.", encoding="utf-8"
+        )
+        assert watcher.check_once() is True
+        runner._worker_thread.join(timeout=60)
+        results = pipeline.catalogue.search_by_keyword("tarif PPh Pasal 21", limit=5)
+        assert any("tarif" in passage.text.lower() for passage in results)

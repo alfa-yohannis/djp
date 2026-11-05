@@ -1,27 +1,29 @@
 /* ==========================================================================
-   Akreditasi RAG — interface styling
+   DJP RAG — interface styling
    ==========================================================================
-   Brand palette taken from pradita.ac.id:
+   Palette taken from pajak.go.id:
 
-     #f26e21  primary orange — the dominant brand colour on the university site
-     #405b4c  deep green     — secondary accent
+     #093b6e  navy — the dominant colour of the site's header and fills
+     #ffc91b  gold — its accent
      #404040 / #4d4d4d / #737373 / #c0c0c0 / #d9d9d9 / #f0f1f1
-                             — the neutral grey ramp the site is built on
+                     — a neutral grey ramp
 
-   Orange at full strength fails contrast for body-size text on white, so the
-   raw brand hue is reserved for fills, indicators and large type, while a
-   darkened variant carries orange-coloured text. The dark theme mirrors the
-   system in reverse, driven purely by the reader's OS preference.
+   Navy carries white text comfortably, so it is the fill for buttons and
+   indicators. Gold fails contrast under white text, so it appears only as
+   an accent — the sidebar hairline, the guest avatar with navy lettering.
+   The dark theme lightens navy just enough to stay visible on dark surfaces
+   while still carrying white text.
    ========================================================================== */
 
 :root {
   /* -- Brand ------------------------------------------------------------- */
-  --brand-orange: #f26e21;
-  --brand-orange-strong: #d95a12;
-  --brand-orange-text: #b34a0c;      /* AA-compliant on light surfaces */
-  --brand-orange-wash: #fdf0e7;
-  --brand-green: #405b4c;
-  --brand-green-wash: #e8efeb;
+  --brand-navy: #093b6e;
+  --brand-navy-strong: #062a50;
+  --brand-navy-text: #093b6e;      /* AA-compliant on light surfaces */
+  --brand-navy-wash: #e8eef6;
+  --brand-gold: #ffc91b;
+  --brand-gold-wash: #fff6d9;
+  --brand-gold-ink: #093b6e;       /* text placed on a gold fill */
 
   /* -- Surfaces ---------------------------------------------------------- */
   --surface-page: #f7f7f8;
@@ -41,13 +43,13 @@
   --text-inverse: #ffffff;
 
   /* -- Semantic ---------------------------------------------------------- */
-  --accent: var(--brand-orange);
-  --accent-text: var(--brand-orange-text);
-  --accent-hover: var(--brand-orange-strong);
-  --accent-wash: var(--brand-orange-wash);
+  --accent: var(--brand-navy);
+  --accent-text: var(--brand-navy-text);
+  --accent-hover: var(--brand-navy-strong);
+  --accent-wash: var(--brand-navy-wash);
 
   --success: #2f6b52;
-  --success-wash: var(--brand-green-wash);
+  --success-wash: #e6f2ec;
   --warning: #8a5a10;
   --warning-wash: #fbf0dc;
   --danger: #c2231f;
@@ -77,12 +79,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --brand-orange: #f57f36;
-    --brand-orange-strong: #ff9455;
-    --brand-orange-text: #ffa063;
-    --brand-orange-wash: #33200f;
-    --brand-green: #6d9b83;
-    --brand-green-wash: #1b2b23;
+    --brand-navy: #2f6db0;
+    --brand-navy-strong: #3f82c9;
+    --brand-navy-text: #8dbdf0;
+    --brand-navy-wash: #132337;
+    --brand-gold: #f5c02a;
+    --brand-gold-wash: #2e2610;
+    --brand-gold-ink: #0b2440;
 
     --surface-page: #17181a;
     --surface-panel: #1f2124;
@@ -99,6 +102,7 @@
     --text-inverse: #1a1b1d;
 
     --success: #6fbd97;
+    --success-wash: #1b2b23;
     --warning: #d8a75f;
     --warning-wash: #33280f;
     --danger: #ef8079;
@@ -253,13 +257,13 @@ html, body {
   transition: opacity 240ms ease;
 }
 
-/* The brand's orange signature, carried as a hairline along the top edge. */
+/* The brand's navy-to-gold signature, carried as a hairline along the top edge. */
 .sidebar::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--brand-orange) 0%, var(--brand-orange-strong) 55%, var(--brand-green) 100%);
+  background: linear-gradient(90deg, var(--brand-navy) 0%, var(--brand-navy-strong) 55%, var(--brand-gold) 100%);
 }
 
 .main {
@@ -275,7 +279,7 @@ html, body {
   position: relative;
   margin-bottom: 24px;
   padding-left: 13px;
-  border-left: 3px solid var(--brand-orange);
+  border-left: 3px solid var(--brand-navy);
 }
 
 .sidebar-header h1 {
@@ -323,14 +327,14 @@ html, body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--brand-green);
-  color: #fff;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
   font-family: var(--font-display);
   font-size: 13px;
   font-weight: 700;
 }
 .account-bar.is-admin .account-avatar {
-  background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-strong));
+  background: linear-gradient(135deg, var(--brand-navy), var(--brand-navy-strong));
 }
 
 .account-identity {
@@ -506,12 +510,12 @@ html, body {
 .button:active:not(:disabled) { transform: translateY(1px); }
 
 .button.primary {
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   color: #fff;
   box-shadow: var(--shadow-low);
 }
 .button.primary:hover:not(:disabled) {
-  background: var(--brand-orange-strong);
+  background: var(--brand-navy-strong);
   box-shadow: var(--shadow-mid);
 }
 
@@ -553,13 +557,13 @@ html, body {
 
 .select:focus, .text-input:focus {
   outline: none;
-  border-color: var(--brand-orange);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-orange) 20%, transparent);
+  border-color: var(--brand-navy);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-navy) 20%, transparent);
 }
 
 .slider {
   width: 100%;
-  accent-color: var(--brand-orange);
+  accent-color: var(--brand-navy);
   margin: 2px 0 0;
 }
 
@@ -620,7 +624,7 @@ html, body {
   height: 100%;
   width: 0%;
   border-radius: 100px;
-  background: linear-gradient(90deg, var(--brand-orange), var(--brand-orange-strong));
+  background: linear-gradient(90deg, var(--brand-navy), var(--brand-navy-strong));
   transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -692,7 +696,7 @@ html, body {
 
 .tab.active {
   color: var(--accent-text);
-  border-bottom-color: var(--brand-orange);
+  border-bottom-color: var(--brand-navy);
 }
 
 /* Looks like a tab but leaves the app: it opens the API documentation in a new
@@ -718,7 +722,7 @@ html, body {
 
 .tab-link:hover {
   color: var(--accent-text);
-  border-bottom-color: color-mix(in srgb, var(--brand-orange) 45%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--brand-navy) 45%, transparent);
 }
 
 .tab-panel {
@@ -768,7 +772,7 @@ html, body {
 
 .toolbar-button:hover {
   background: var(--accent-wash);
-  border-color: var(--brand-orange);
+  border-color: var(--brand-navy);
   color: var(--accent-text);
 }
 
@@ -823,20 +827,20 @@ html, body {
               box-shadow 140ms ease, transform 140ms ease;
 }
 
-/* An orange edge that slides in on hover, echoing the sidebar's brand rule. */
+/* A navy edge that slides in on hover, echoing the sidebar's brand rule. */
 .example::before {
   content: "";
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 3px;
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   transform: scaleY(0);
   transform-origin: center;
   transition: transform 160ms ease;
 }
 
 .example:hover {
-  border-color: color-mix(in srgb, var(--brand-orange) 45%, var(--border-soft));
+  border-color: color-mix(in srgb, var(--brand-navy) 45%, var(--border-soft));
   color: var(--text-primary);
   box-shadow: var(--shadow-mid);
   transform: translateY(-1px);
@@ -874,11 +878,11 @@ html, body {
 
 .question-copy:hover {
   color: var(--accent-text);
-  border-color: var(--brand-orange);
+  border-color: var(--brand-navy);
 }
 
 .question-bubble {
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   color: #fff;
   padding: 10px 16px;
   border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
@@ -911,8 +915,8 @@ html, body {
 .spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid color-mix(in srgb, var(--brand-orange) 25%, transparent);
-  border-top-color: var(--brand-orange);
+  border: 2px solid color-mix(in srgb, var(--brand-navy) 25%, transparent);
+  border-top-color: var(--brand-navy);
   border-radius: 50%;
   animation: spin 720ms linear infinite;
   flex-shrink: 0;
@@ -977,7 +981,7 @@ html, body {
 .answer-text h2 {
   font-size: 18px;
   padding-bottom: 5px;
-  border-bottom: 2px solid var(--brand-orange);
+  border-bottom: 2px solid var(--brand-navy);
   display: inline-block;
 }
 .answer-text h3 { font-size: 16px; color: var(--accent-text); }
@@ -990,14 +994,14 @@ html, body {
 .answer-text ul,
 .answer-text ol { margin: 0 0 12px; padding-left: 22px; }
 .answer-text li { margin-bottom: 5px; }
-.answer-text li::marker { color: var(--brand-orange); font-weight: 600; }
+.answer-text li::marker { color: var(--brand-navy); font-weight: 600; }
 .answer-text li > ul,
 .answer-text li > ol { margin: 5px 0 0; }
 
 .answer-text blockquote {
   margin: 0 0 12px;
   padding: 8px 14px;
-  border-left: 3px solid var(--brand-orange);
+  border-left: 3px solid var(--brand-navy);
   background: var(--accent-wash);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--text-secondary);
@@ -1045,7 +1049,7 @@ html, body {
   text-underline-offset: 2px;
   word-break: break-all;
 }
-.answer-text a:hover { color: var(--brand-orange-strong); }
+.answer-text a:hover { color: var(--brand-navy-strong); }
 
 /* `display: block` makes the table itself the scroll container, so a wide
    table scrolls within the answer instead of stretching the page. */
@@ -1096,7 +1100,7 @@ html, body {
   text-align: center;
   color: var(--accent-text);
   background: var(--accent-wash);
-  border: 1px solid color-mix(in srgb, var(--brand-orange) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-navy) 30%, transparent);
   border-radius: var(--radius-xs);
   cursor: pointer;
   vertical-align: 2px;
@@ -1105,9 +1109,9 @@ html, body {
 }
 
 .citation-marker:hover {
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   color: #fff;
-  border-color: var(--brand-orange);
+  border-color: var(--brand-navy);
 }
 
 .answer-error {
@@ -1169,7 +1173,7 @@ a.link-button { text-decoration: underline; }
 
 .session-row.active {
   background: var(--accent-wash);
-  box-shadow: inset 3px 0 0 var(--brand-orange);
+  box-shadow: inset 3px 0 0 var(--brand-navy);
 }
 
 .session-open {
@@ -1294,7 +1298,7 @@ a.link-button { text-decoration: underline; }
 
 .source-card.highlighted {
   background: var(--accent-wash);
-  box-shadow: inset 3px 0 0 var(--brand-orange);
+  box-shadow: inset 3px 0 0 var(--brand-navy);
 }
 
 .source-card-header {
@@ -1308,7 +1312,7 @@ a.link-button { text-decoration: underline; }
   font-size: 10.5px;
   font-weight: 750;
   color: #fff;
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   border-radius: var(--radius-xs);
   padding: 1px 7px;
   flex-shrink: 0;
@@ -1386,7 +1390,7 @@ a.link-button { text-decoration: underline; }
   color: var(--accent-text);
   text-decoration: none;
   padding: 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--brand-orange) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-navy) 40%, transparent);
   border-radius: 100px;
   background: var(--surface-panel);
   white-space: nowrap;
@@ -1394,9 +1398,9 @@ a.link-button { text-decoration: underline; }
 }
 
 .external-link:hover {
-  background: var(--brand-orange);
+  background: var(--brand-navy);
   color: #fff;
-  border-color: var(--brand-orange);
+  border-color: var(--brand-navy);
 }
 
 .source-actions { display: flex; gap: 14px; margin-top: 9px; }
@@ -1416,7 +1420,7 @@ a.link-button { text-decoration: underline; }
   transition: color 120ms ease;
 }
 
-.link-button:hover { color: var(--brand-orange-strong); }
+.link-button:hover { color: var(--brand-navy-strong); }
 
 /* -------------------------------------------------------------- composer */
 
@@ -1447,8 +1451,8 @@ a.link-button { text-decoration: underline; }
 
 .composer-input:focus {
   outline: none;
-  border-color: var(--brand-orange);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-orange) 20%, transparent);
+  border-color: var(--brand-navy);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-navy) 20%, transparent);
 }
 
 .composer-input:disabled { opacity: 0.6; }
@@ -1482,7 +1486,7 @@ a.link-button { text-decoration: underline; }
 .passage-item {
   background: var(--surface-panel);
   border: 1px solid var(--border-soft);
-  border-left: 3px solid var(--brand-orange);
+  border-left: 3px solid var(--brand-navy);
   border-radius: var(--radius-md);
   padding: 14px 17px;
   margin: 0 auto 11px;
@@ -1601,7 +1605,7 @@ a.link-button { text-decoration: underline; }
   color: var(--text-inverse);
   padding: 11px 20px;
   border-radius: var(--radius-md);
-  border-left: 3px solid var(--brand-orange);
+  border-left: 3px solid var(--brand-navy);
   font-size: 12.5px;
   font-weight: 500;
   box-shadow: var(--shadow-high);
@@ -1683,7 +1687,7 @@ a.link-button { text-decoration: underline; }
     margin-bottom: 0;
     border-bottom: none;
   }
-  .tab.active { box-shadow: inset 0 -2px 0 var(--brand-orange); }
+  .tab.active { box-shadow: inset 0 -2px 0 var(--brand-navy); }
 
   /* 16px stops iOS from zooming the page in whenever the box is focused. */
   .composer-input { font-size: 16px; }

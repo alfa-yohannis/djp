@@ -1,4 +1,4 @@
-"""Configuration objects for the Akreditasi RAG system.
+"""Configuration objects for the DJP RAG system.
 
 This module exposes two classes:
 
@@ -152,19 +152,27 @@ class Settings:
         self._reader = reader
 
         # --- Corpus location ------------------------------------------------
-        #: The document corpus. Opened read-only, never written to.
+        #: The document corpus: snapshots of pajak.go.id written by
+        #: `main.py crawl`. Ingest and the server only ever read it.
         self.source_directory: Path = reader.path(
-            "SOURCE_DIR", r"G:\Shared drives\Tim Borang M.TI\Akreditasi\2026"
+            "SOURCE_DIR", PROJECT_ROOT / "corpus-pajak"
         )
         #: Extra directories indexed alongside the corpus, separated by ";".
-        #: `corpus-lokal` holds material copied out of the shared drive's `zdev`
-        #: folder — the SINTA and Scholar exports, the LKPS tables and the LAM
-        #: INFOKOM instruments. A missing extra root is skipped, not an error.
+        #: A missing extra root is skipped, not an error.
         self.additional_source_directories: list[Path] = reader.path_list(
-            "EXTRA_SOURCE_DIRS", [PROJECT_ROOT / "corpus-lokal"]
+            "EXTRA_SOURCE_DIRS", []
         )
         #: Root for every artefact this system generates. Must sit outside the corpus.
         self.data_directory: Path = reader.path("DATA_DIR", PROJECT_ROOT / "data")
+
+        # --- pajak.go.id crawl -----------------------------------------------
+        #: Courtesy pause between requests to pajak.go.id.
+        self.pajak_crawl_delay_seconds: float = reader.decimal("PAJAK_CRAWL_DELAY", 1.0)
+        self.pajak_crawl_timeout_seconds: int = reader.integer("PAJAK_CRAWL_TIMEOUT", 45)
+        #: Attachments larger than this are not downloaded.
+        self.pajak_attachment_maximum_megabytes: float = reader.decimal(
+            "PAJAK_ATTACHMENT_MAX_MB", 30.0
+        )
 
         # --- External page snapshots ----------------------------------------
         #: Where snapshots of SINTA / Scholar pages are written. Sits inside
@@ -256,6 +264,9 @@ class Settings:
         )
         #: Files above this size are skipped, guarding against runaway extraction.
         self.maximum_file_megabytes: float = reader.decimal("MAX_FILE_MB", 200.0)
+        #: While the server runs, check the corpus this often and index whatever
+        #: the crawler has added since the last run. 0 turns it off.
+        self.auto_ingest_seconds: int = reader.integer("AUTO_INGEST_SECONDS", 60)
 
         # --- Chunking -------------------------------------------------------
         #: Target chunk length, measured with the embedding model's tokenizer.
@@ -361,7 +372,7 @@ class Settings:
         # --- Web server -----------------------------------------------------
         #: Loopback by default; the corpus is internal material.
         self.server_host: str = reader.text("HOST", "127.0.0.1")
-        self.server_port: int = reader.integer("PORT", 8026)
+        self.server_port: int = reader.integer("PORT", 8028)
         #: Lets the browser ask the local server to open a cited file natively.
         self.file_opening_enabled: bool = reader.flag("ALLOW_OPEN_FILE", True)
 

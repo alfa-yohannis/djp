@@ -1,8 +1,9 @@
-"""Command-line entry point for the Akreditasi RAG system.
+"""Command-line entry point for the DJP RAG system.
 
 Subcommands, all sharing the same application objects:
 
     python main.py serve              start the web interface (default)
+    python main.py crawl [--full]     fetch pajak.go.id into the corpus, then index
     python main.py ingest [--rebuild] build or refresh the index
     python main.py ask "pertanyaan"   answer one question in the terminal
     python main.py status             print index and backend status
@@ -21,7 +22,7 @@ import sys
 from app.config import SETTINGS
 from app.safety import SOURCE_GUARD
 
-LOGGER = logging.getLogger("akreditasi")
+LOGGER = logging.getLogger("djp")
 
 
 class CommandLineInterface:
@@ -36,7 +37,7 @@ class CommandLineInterface:
         """Build the argument parser with one subparser per command."""
         self._parser = argparse.ArgumentParser(
             prog="main.py",
-            description="Sistem RAG dokumen akreditasi (baca-saja atas direktori sumber).",
+            description="Sistem RAG informasi perpajakan dari salinan pajak.go.id.",
         )
         subparsers = self._parser.add_subparsers(dest="command")
 
@@ -76,6 +77,38 @@ class CommandLineInterface:
             help="Pakai HTTP biasa saja; lewati browser, login SINTA, dan PDDikti",
         )
 
+        crawl_parser = subparsers.add_parser(
+            "crawl",
+            help="Ambil halaman dan lampiran pajak.go.id ke korpus, lalu indeks",
+        )
+        crawl_parser.add_argument(
+            "--full",
+            action="store_true",
+            help="Ambil seluruh halaman tiap bagian, bukan sampel (berjam-jam)",
+        )
+        crawl_parser.add_argument(
+            "--limit",
+            type=int,
+            default=None,
+            help="Paling banyak N halaman per daftar dan N lampiran per bagian",
+        )
+        crawl_parser.add_argument(
+            "--sections",
+            default=None,
+            help="Bagian yang diambil, dipisah koma (mis. 'Peraturan,FAQ'). "
+            "Pengumuman dan Berita hanya diambil bila disebut di sini.",
+        )
+        crawl_parser.add_argument(
+            "--refresh",
+            action="store_true",
+            help="Ambil ulang halaman yang salinannya sudah ada",
+        )
+        crawl_parser.add_argument(
+            "--no-ingest",
+            action="store_true",
+            help="Hanya ambil halaman, jangan langsung mengindeks",
+        )
+
         subparsers.add_parser("status", help="Tampilkan ringkasan indeks dan backend")
         subparsers.add_parser(
             "hash-password", help="Buat hash kata sandi untuk ADMIN_ atau GUEST_PASSWORD_HASH"
@@ -94,9 +127,52 @@ class CommandLineInterface:
             "ask": self._run_ask,
             "status": self._run_status,
             "snapshot": self._run_snapshot,
+            "crawl": self._run_crawl,
             "hash-password": self._run_hash_password,
         }
         return handlers[command](parsed)
+
+    def _run_crawl(self, parsed: argparse.Namespace) -> int:
+        """Crawl pajak.go.id into the corpus, then index what was written."""
+        from app.ingestion import INGESTION_PIPELINE
+        from app.pajak_crawler import PAJAK_CRAWLER
+
+        section_names = parsed.sections.split(",") if parsed.sections else None
+        print(f"\n  Menyimpan ke: {SETTINGS.source_directory}")
+        print(f"  Mode: {'penuh' if parsed.full else 'sampel'}"
+              + (f", maks {parsed.limit} per bagian" if parsed.limit else "") + "\n")
+        try:
+            outcome = PAJAK_CRAWLER.run(
+                full=parsed.full,
+                section_names=section_names,
+                refresh=parsed.refresh,
+                page_limit=parsed.limit,
+                progress_callback=self._report_crawl_progress,
+            )
+        except ValueError as error:
+            print(f"  {error}", file=sys.stderr)
+            return 1
+
+        print("\n--- Ringkasan Crawl ---")
+        print(f"  Halaman baru     : {outcome.pages_written}")
+        print(f"  Sudah ada        : {outcome.pages_unchanged}")
+        print(f"  Tanpa teks       : {outcome.pages_skipped}")
+        print(f"  Lampiran diunduh : {outcome.attachments_written}")
+        print(f"  Gagal            : {outcome.failed}")
+        for message in outcome.errors[:30]:
+            print(f"    - {message}")
+
+        if parsed.no_ingest or not (outcome.pages_written or outcome.attachments_written):
+            return 0
+        print("\n  Mengindeks...")
+        summary = INGESTION_PIPELINE.run()
+        print(f"  Dokumen diindeks : {summary['documents_indexed']}")
+        print(f"  Potongan dibuat  : {summary['chunks_created']}")
+        return 1 if summary.get("error_message") else 0
+
+    def _report_crawl_progress(self, section: str, done: int, total: int, url: str) -> None:
+        """Print one progress line per crawled page."""
+        print(f"  [{section} {done}/{total}] {url}", flush=True)
 
     def _run_hash_password(self, _parsed: argparse.Namespace) -> int:
         """Prompt for a password twice and print its hash for `.env`."""
@@ -191,10 +267,10 @@ class CommandLineInterface:
                 print(f"  Alamat lain (adapter virtual/VPN): {', '.join(others)}")
             print(
                 "\n  PERHATIAN: server terbuka ke jaringan. Siapa pun yang memegang\n"
-                "  kata sandi guest bisa membaca seluruh dokumen akreditasi yang\n"
+                "  kata sandi guest bisa memakai asisten dan mengunduh dokumen yang\n"
                 "  terindeks. Jangan sebarkan kata sandi itu di luar tim.\n"
                 "  Izinkan lewat firewall dengan (jalankan sebagai Administrator):\n"
-                f"    New-NetFirewallRule -DisplayName 'Akreditasi RAG' "
+                f"    New-NetFirewallRule -DisplayName 'DJP RAG' "
                 f"-Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow -Profile Private"
             )
 

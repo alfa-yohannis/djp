@@ -887,7 +887,7 @@ class AntigravityBackend(CommandLineAgentBackend):
         and, usefully, means it cannot see the corpus or the project either.
         """
         if self._scratch_directory is None:
-            self._scratch_directory = tempfile.mkdtemp(prefix="akreditasi-agy-")
+            self._scratch_directory = tempfile.mkdtemp(prefix="djp-agy-")
         return self._scratch_directory
 
     def build_command(self) -> list[str]:

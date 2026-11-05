@@ -20,6 +20,7 @@ import logging
 import os
 import subprocess
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Iterator
 
@@ -34,7 +35,7 @@ from .config import SETTINGS, Settings
 from .conversations import CONVERSATION_STORE
 from .embeddings import ComputeDeviceResolver
 from .extractors import EXTRACTOR_REGISTRY
-from .ingestion import INGESTION_RUNNER, TEXT_EMBEDDER
+from .ingestion import AUTOMATIC_INGESTION, INGESTION_RUNNER, TEXT_EMBEDDER, AutomaticIngestion
 from .rag import LANGUAGE_MODEL_FACTORY, QuestionRequest, RagEngine
 from .retrieval import CROSS_ENCODER_RERANKER, HybridRetriever
 from .safety import SOURCE_GUARD
@@ -169,10 +170,12 @@ class RagWebApplication:
         self,
         settings: Settings,
         authentication: AuthenticationService = AUTHENTICATION_SERVICE,
+        automatic_ingestion: AutomaticIngestion = AUTOMATIC_INGESTION,
     ) -> None:
         """Compose every collaborator and register the HTTP routes."""
         self._settings = settings
         self._authentication = authentication
+        self._automatic_ingestion = automatic_ingestion
         self._device_resolver = ComputeDeviceResolver()
         self._file_launcher = LocalFileLauncher(settings)
         self._answer_jobs = AnswerJobRegistry()
@@ -195,9 +198,10 @@ class RagWebApplication:
         )
 
         self.api = FastAPI(
-            title="Akreditasi RAG",
-            description="Pencarian dan tanya-jawab atas dokumen akreditasi MTI 2026",
+            title="DJP RAG",
+            description="Pencarian dan tanya-jawab atas salinan informasi perpajakan pajak.go.id",
             version="1.0.0",
+            lifespan=self._lifespan,
         )
         self.api.middleware("http")(self._require_session)
         self._register_routes()
@@ -241,6 +245,15 @@ class RagWebApplication:
         self.api.add_api_route(
             "/api/sessions/{session_id}", self.delete_session, methods=["DELETE"]
         )
+
+    @asynccontextmanager
+    async def _lifespan(self, _api: FastAPI):
+        """Keep the automatic indexer running for as long as the server is up."""
+        self._automatic_ingestion.start()
+        try:
+            yield
+        finally:
+            self._automatic_ingestion.stop()
 
     def _mount_static_assets(self) -> None:
         """Serve the browser interface's static files."""

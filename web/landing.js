@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Akreditasi RAG — landing page
+   DJP RAG — landing page
    ==========================================================================
      SessionState      asks the server who is signed in and swaps the CTAs
      SignInCard        the shared admin/guest login form and its feedback
