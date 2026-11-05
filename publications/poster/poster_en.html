@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Poster A1 (EN) — Building Your Own Local AI</title>
+<title>Poster A1 (EN) — Building Your Own Local AI · DJP case study</title>
 <style>
 /* ==========================================================================
-   Poster A1 potret (594 × 841 mm) — Asisten Dokumen Akreditasi
+   Poster A1 potret (594 × 841 mm) — Asisten Pajak, studi kasus DJP
    --------------------------------------------------------------------------
-   Memakai sistem warna yang sama dengan landing page produk (oranye & hijau
-   Pradita di atas ramp netral) agar poster dan aplikasinya terbaca sebagai
-   satu hal. Tanpa web font: seluruhnya memakai huruf sistem, sehingga hasil
-   cetak identik di komputer mana pun.
+   Memakai sistem warna yang sama dengan landing page produk (biru tua dan
+   kuning emas di atas ramp netral) agar poster dan aplikasinya terbaca
+   sebagai satu hal. Tanpa web font: seluruhnya memakai huruf sistem, sehingga
+   hasil cetak identik di komputer mana pun.
 
    Render:  python render_poster.py   → poster.pdf (A1, siap cetak)
    ========================================================================== */
 
 :root {
-  --orange:        #f26e21;
-  --orange-strong: #d95a12;
-  --orange-text:   #b34a0c;
-  --orange-wash:   #fdf0e7;
-  --green:         #405b4c;
-  --green-text:    #2f6b52;
-  --green-wash:    #e8efeb;
+  --navy:        #093b6e;
+  --navy-strong: #062a50;
+  --navy-text:   #093b6e;
+  --navy-wash:   #e8eef6;
+  --navy-line:   #c9d8ea;
+  --gold:        #ffc91b;
+  --gold-text:   #7a5a00;
+  --gold-wash:   #fff6d9;
+  --gold-line:   #f0dc93;
 
   --page:  #ffffff;
   --panel: #ffffff;
@@ -34,9 +36,10 @@
   --ink-2: #4a4a4f;
   --ink-3: #77777d;
 
-  --dark:     #16181a;
-  --dark-ink: #f2f2f0;
-  --dark-ink-2: #a9adb2;
+  --dark:      #062a50;
+  --dark-deep: #041d38;
+  --dark-ink:  #f2f2f0;
+  --dark-ink-2: #b3c3d6;
 
   --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Inter, Arial, sans-serif;
   --display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Inter, Arial, sans-serif;
@@ -65,10 +68,10 @@ body {
 /* ---------------------------------------------------------------- header */
 
 .masthead {
-  background: var(--dark);
+  background: linear-gradient(135deg, #0b4380 0%, var(--dark) 55%, var(--dark-deep) 100%);
   color: var(--dark-ink);
   padding: 24mm 30mm 20mm;
-  border-bottom: 3mm solid var(--orange);
+  border-bottom: 3mm solid var(--gold);
   position: relative;
   overflow: hidden;
 }
@@ -80,11 +83,11 @@ body {
   top: -70mm; right: -60mm;
   width: 240mm; height: 240mm;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(242,110,33,0.20) 0%, rgba(242,110,33,0) 68%);
+  background: radial-gradient(circle, rgba(255,201,27,0.16) 0%, rgba(255,201,27,0) 68%);
   z-index: 0;
 }
 
-/* logo resmi berwarna gelap, jadi diberi alas putih agar terbaca di band hitam */
+/* logo resmi berwarna gelap, jadi diberi alas putih agar terbaca di band gelap */
 .brand {
   position: absolute;
   top: 20mm;
@@ -102,7 +105,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.30mm;
   text-transform: uppercase;
-  color: var(--orange);
+  color: var(--gold);
   margin-bottom: 9mm;
 }
 
@@ -121,7 +124,7 @@ body {
   line-height: 1.22;
   font-weight: 600;
   letter-spacing: -0.14mm;
-  color: var(--orange);
+  color: var(--gold);
   margin-bottom: 8mm;
   max-width: 440mm;
 }
@@ -158,7 +161,7 @@ h2 {
 }
 h2 + .underline {
   width: 26mm; height: 1.5mm;
-  background: var(--orange);
+  background: var(--gold);
   border-radius: 1mm;
   margin-bottom: 6mm;
 }
@@ -183,9 +186,9 @@ h2 + .underline {
   font-size: 8.2mm;
   line-height: 1.42;
   font-weight: 700;
-  color: var(--orange);
+  color: var(--navy);
 }
-.points.checks .mark { color: var(--green-text); }
+.points.checks .mark { color: var(--navy-text); }
 
 /* -------------------------------------------------------------- langkah */
 
@@ -210,18 +213,18 @@ h2 + .underline {
   width: 14mm; height: 14mm;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: var(--orange-wash);
-  color: var(--orange-text);
+  background: var(--navy-wash);
+  color: var(--navy-text);
   font-size: 7.6mm;
   font-weight: 700;
 }
 
 /* langkah terakhir — hasil yang dilihat pengguna */
 .step.final {
-  background: var(--green-wash);
-  border-color: #bfd2c7;
+  background: var(--gold-wash);
+  border-color: var(--gold-line);
 }
-.step.final .num { background: var(--green-text); color: #fff; }
+.step.final .num { background: var(--gold); color: var(--navy-strong); }
 
 .connector {
   width: 0.7mm;
@@ -254,7 +257,7 @@ h2 + .underline {
   flex: none;
   width: 4.6mm; height: 4.6mm;
   border-radius: 50%;
-  background: var(--orange);
+  background: var(--gold);
 }
 
 .demo-a {
@@ -269,13 +272,15 @@ h2 + .underline {
   padding: 0.4mm 1.4mm;
   margin-left: 0.6mm;
   border-radius: 1.4mm;
-  background: var(--orange-wash);
-  color: var(--orange-text);
+  background: var(--navy-wash);
+  color: var(--navy-text);
   font-size: 5.6mm;
   font-weight: 700;
   text-align: center;
   vertical-align: 1.6mm;
 }
+/* nomor sitasi tidak boleh terpisah sendirian ke baris berikutnya */
+.demo-a .keep { white-space: nowrap; }
 
 .demo-sources {
   padding: 0 6mm 5.6mm;
@@ -288,8 +293,8 @@ h2 + .underline {
   gap: 4mm;
   align-items: start;
   padding: 4.6mm 5mm;
-  background: var(--green-wash);
-  border: 0.4mm solid #cddcd3;
+  background: var(--navy-wash);
+  border: 0.4mm solid var(--navy-line);
   border-radius: 3mm;
   font-size: 6.4mm;
   line-height: 1.3;
@@ -297,7 +302,7 @@ h2 + .underline {
 }
 .demo-source .n {
   font-weight: 700;
-  color: var(--green-text);
+  color: var(--navy-text);
 }
 .demo-source b { color: var(--ink); font-weight: 600; }
 
@@ -322,7 +327,7 @@ h2 + .underline {
   font-weight: 700;
   letter-spacing: 0.6mm;
   text-transform: uppercase;
-  color: var(--orange);
+  color: var(--gold);
   margin-bottom: 8mm;
 }
 
@@ -386,7 +391,7 @@ h2 + .underline {
 .ask {
   background: var(--panel);
   border: 0.5mm solid var(--line);
-  border-left: 2mm solid var(--orange);
+  border-left: 2mm solid var(--gold);
   border-radius: 3.4mm;
   padding: 5.6mm 6.5mm;
   font-size: 7.9mm;
@@ -426,7 +431,7 @@ h2 + .underline {
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.3mm;
-  color: var(--orange-text);
+  color: var(--navy-text);
 }
 .stat .label {
   font-size: 7.2mm;
@@ -457,7 +462,7 @@ h2 + .underline {
 }
 .tech-opt b {
   font-weight: 700;
-  color: var(--orange-text);
+  color: var(--navy-text);
 }
 
 /* ------------------------------------------------------------- format */
@@ -473,11 +478,11 @@ h2 + .underline {
   font-weight: 600;
   color: var(--ink-2);
 }
-/* sumber luar dibedakan warnanya dari daftar format file */
+/* bagian situs pajak.go.id dibedakan warnanya dari daftar format file */
 .chip.ext {
-  border-color: var(--orange);
-  background: var(--orange-wash);
-  color: var(--orange-text);
+  border-color: var(--gold);
+  background: var(--gold-wash);
+  color: var(--gold-text);
 }
 
 .chips-sub {
@@ -493,19 +498,19 @@ h2 + .underline {
 .spec-line {
   margin-top: 5mm;
   padding: 5mm 6mm;
-  background: var(--orange-wash);
-  border: 0.5mm solid #f1cdb0;
+  background: var(--gold-wash);
+  border: 0.5mm solid var(--gold-line);
   border-radius: 3mm;
   font-size: 7.6mm;
   line-height: 1.38;
   color: var(--ink-2);
 }
-.spec-line b { color: var(--orange-text); font-weight: 700; }
+.spec-line b { color: var(--gold-text); font-weight: 700; }
 
 /* ---------------------------------------------------------------- kaki */
 
 .footer {
-  background: var(--dark);
+  background: var(--dark-deep);
   color: var(--dark-ink-2);
   padding: 8mm 30mm;
   display: flex;
@@ -521,12 +526,13 @@ h2 + .underline {
 
 <header class="masthead">
   <div class="brand"><img src="pradita-logo.png" alt="Pradita University logo"></div>
-  <div class="kicker">Master of Informatics Engineering &middot; Pradita University</div>
+  <div class="kicker">Faculty of Science and Technology &middot; Pradita University</div>
   <h1>Building Your Own Local AI</h1>
   <p class="tagline">Empower your organization's document search with AI</p>
-  <p>Ask anything about your accreditation documents, in everyday language.
-     Every answer names <b>the file and the page it came from</b>, and you can
-     open that document on the spot.</p>
+  <p>An independent case study on public information from Indonesia's
+     <b>Directorate General of Taxes (DJP)</b>. Ask any tax question in
+     everyday language; every answer cites <b>the regulation or page it came
+     from</b>.</p>
 </header>
 
 <main class="sheet">
@@ -538,12 +544,12 @@ h2 + .underline {
       <h2>The problem</h2><div class="underline"></div>
       <ul class="points">
         <li><span class="mark">—</span>
-          <span>Accreditation evidence is scattered across <b>thousands of
-          files</b> on a shared drive: PDFs, Word, Excel, slides, even
-          scanned pages.</span></li>
+          <span>Tax rules are spread over <b>thousands of pages</b> on
+          pajak.go.id: laws, regulations, articles, FAQs, forms, and their
+          PDF attachments.</span></li>
         <li><span class="mark">—</span>
-          <span>A single assessor question can take <b>half an hour</b> just
-          to open the files one by one.</span></li>
+          <span>One simple question can take <b>half an hour</b> of searching
+          and reading one regulation after another.</span></li>
       </ul>
     </section>
 
@@ -557,14 +563,14 @@ h2 + .underline {
         <div class="connector"></div>
         <div class="step">
           <div class="num">2</div>
-          <div>The system finds the <b>most relevant</b> documents and
-               summarises them for you.</div>
+          <div>The system searches <b>over 10,000 pages and regulations</b>
+               copied from pajak.go.id and summarises the most relevant.</div>
         </div>
         <div class="connector"></div>
         <div class="step final">
           <div class="num">3</div>
-          <div>It shows <b>evidence cards</b>: document name, page, and the
-               quoted passage. One click opens or downloads the original.</div>
+          <div>It shows <b>evidence cards</b>: the regulation or page, the
+               quoted passage, and a link to the original on pajak.go.id.</div>
         </div>
       </div>
     </section>
@@ -572,24 +578,23 @@ h2 + .underline {
     <section class="block">
       <h2>What you get</h2><div class="underline"></div>
       <div class="demo">
-        <div class="demo-q"><span class="dot"></span>Can I study AI and Machine Learning in the MTI programme?</div>
+        <div class="demo-q"><span class="dot"></span>What are the personal income tax rates under the HPP Law?</div>
         <div class="demo-a">
-          Yes. The MTI curriculum includes a <b>Machine Learning &amp; Deep
-          Learning</b> course (IT240604, 4 credits), supported by Foundation of
-          Data Science and Applied Data Science in the same
-          track<span class="cite">1</span>. Its learning outcomes include
-          designing solutions based on machine learning and deep
-          learning<span class="cite">2</span>.
+          Under the HPP Law (Law 7 of 2021), annual taxable income is taxed at
+          <b>5%</b> up to IDR 60 million, <b>15%</b> up to IDR 250 million,
+          <b>25%</b> up to IDR 500 million, <b>30%</b> up to IDR 5 billion,
+          and <b>35%</b> above that<span class="cite">1</span>. Withholding on
+          employees' pay follows PP 58 of <span class="keep">2023<span class="cite">2</span>.</span>
         </div>
         <div class="demo-sources">
           <div class="demo-source"><span class="n">1</span>
-            <span><b>Kurikulum Prodi Magister Teknologi Informasi (MTI)</b> — Sheet: 9. Susunan Mata Kuliah</span></div>
+            <span><b>UU 7 Tahun 2021 — Harmonisasi Peraturan Perpajakan</b> — Peraturan · pajak.go.id</span></div>
           <div class="demo-source"><span class="n">2</span>
-            <span><b>Kurikulum Prodi Magister Teknologi Informasi (MTI)</b> — Sheet: 12. Pemetaan CPL-CPMK-MK</span></div>
+            <span><b>PP 58 Tahun 2023 — Tarif Pemotongan PPh Pasal 21</b> — Peraturan · pajak.go.id</span></div>
         </div>
       </div>
-      <p class="demo-caption">Example answer. Click an evidence card to open
-         the original file.</p>
+      <p class="demo-caption">Example answer. Each evidence card links to the
+         original page on pajak.go.id.</p>
     </section>
 
     <section class="block">
@@ -597,16 +602,16 @@ h2 + .underline {
       <ul class="points checks">
         <li><span class="mark">&#10003;</span>
           <span><b>Check it yourself.</b> Every sentence carries a source
-          number, and the document opens right away.</span></li>
+          number, and the original page opens right away.</span></li>
         <li><span class="mark">&#10003;</span>
-          <span><b>No making things up.</b> Answers come only from the
-          documents. If it isn't in the archive, the system says so.</span></li>
+          <span><b>No making things up.</b> Answers come only from the indexed
+          pages. If it isn't there, the system says so.</span></li>
         <li><span class="mark">&#10003;</span>
-          <span><b>Originals stay safe.</b> The system only reads files on the
-          shared drive; it never changes them.</span></li>
+          <span><b>Dated copies.</b> Every page is stored with its original
+          address and the date it was fetched.</span></li>
         <li><span class="mark">&#10003;</span>
-          <span><b>Data stays in the office.</b> Everything runs on the
-          programme's own computer.</span></li>
+          <span><b>Data stays in the office.</b> Everything runs on your own
+          computer.</span></li>
       </ul>
     </section>
 
@@ -616,8 +621,8 @@ h2 + .underline {
          <i>Retrieval-Augmented Generation</i>: the AI may only answer from the
          documents it finds. The AI model is interchangeable:</p>
       <div class="tech-opts">
-        <div class="tech-opt"><b>Local</b> — Qwen3 8B on the programme's own
-          computer; document text never leaves the office.</div>
+        <div class="tech-opt"><b>Local</b> — Qwen3 8B on your own computer;
+          questions and documents never leave the office.</div>
         <div class="tech-opt"><b>Cloud</b> — ChatGPT, Gemini, or Claude, when
           you want sharper answers.</div>
       </div>
@@ -630,8 +635,8 @@ h2 + .underline {
 
     <section class="cta">
       <div class="cta-kicker">Try it now</div>
-      <div class="qr-frame"><img src="qr_code.png" alt="QR code to akreditasi.ayolearn.stream"></div>
-      <div class="cta-url">https://akreditasi.ayolearn.stream</div>
+      <div class="qr-frame"><img src="qr_code.png" alt="QR code to pajak.ayolearn.stream"></div>
+      <div class="cta-url">https://pajak.ayolearn.stream</div>
       <div class="cta-hint">Scan the QR code, or type the address above</div>
       <hr>
       <div class="creds">
@@ -644,27 +649,27 @@ h2 + .underline {
     <section class="block">
       <h2>Try asking</h2><div class="underline"></div>
       <div class="asks">
-        <div class="ask">Which courses are taught in the MTI programme?</div>
-        <div class="ask">How many students and graduates does the programme have?</div>
-        <div class="ask">List the lecturers' research publications from the last three years.</div>
+        <div class="ask">How much income a year is tax-free (PTKP)?</div>
+        <div class="ask">How do I apply for a tax clearance letter (SKF)?</div>
+        <div class="ask">What does the Directorate General of Taxes do?</div>
       </div>
       <p class="asks-note">All three already have answers in the indexed
-         archive.</p>
+         pages.</p>
     </section>
 
     <section class="block">
       <h2>Key Numbers</h2><div class="underline"></div>
       <div class="stats">
         <div class="stat">
-          <div class="value">1,497</div>
+          <div class="value">10,250</div>
           <div class="label">Documents indexed</div>
         </div>
         <div class="stat">
-          <div class="value">188K</div>
+          <div class="value">623K</div>
           <div class="label">Searchable sentences</div>
         </div>
         <div class="stat">
-          <div class="value">3.5M</div>
+          <div class="value">15.9M</div>
           <div class="label">Words inside</div>
         </div>
       </div>
@@ -682,13 +687,15 @@ h2 + .underline {
         <span class="chip">Text</span>
         <span class="chip">Images &amp; scans (OCR)</span>
       </div>
-      <p class="chips-sub">External sources can be added and indexed too,
-         such as:</p>
+      <p class="chips-sub">This demo indexes public content copied from
+         <b>pajak.go.id</b>:</p>
       <div class="chips">
-        <span class="chip ext">PDDikti</span>
-        <span class="chip ext">SINTA</span>
-        <span class="chip ext">Google Scholar</span>
-        <span class="chip ext">Campus website</span>
+        <span class="chip ext">Regulations</span>
+        <span class="chip ext">Articles</span>
+        <span class="chip ext">Press releases</span>
+        <span class="chip ext">FAQ</span>
+        <span class="chip ext">Belajar Pajak</span>
+        <span class="chip ext">Forms</span>
       </div>
       <p class="spec-line"><b>Specs:</b> Intel Core i7, 8 GB VGA, 32 GB RAM,
          10 GB storage &mdash; <b>≈ IDR 20 million</b> per unit.</p>
@@ -698,8 +705,8 @@ h2 + .underline {
 </main>
 
 <footer class="footer">
-  <div><b>Master of Informatics Engineering</b> &middot; Pradita University &middot; alfa.ryano@pradita.ac.id</div>
-  <div>Runs on one office computer &middot; source documents are never modified</div>
+  <div><b>Faculty of Science and Technology</b> &middot; Pradita University &middot; alfa.ryano@pradita.ac.id</div>
+  <div>Independent case study &middot; not an official DJP service</div>
 </footer>
 
 </body>
