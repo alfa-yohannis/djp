@@ -140,3 +140,22 @@ class TestCancellingAnAnswer:
 
     def test_cancelling_an_unknown_answer_is_not_found(self, client):
         assert client.post("/api/answers/tidak-ada/cancel").status_code == 404
+
+
+def test_server_indexes_with_the_question_encoder(isolated_settings, monkeypatch):
+    """Indexing inside the server must not put a model on the GPU: a CUDA
+    context stays in the process after the run and crowds out the answering
+    model. The server therefore hands the pipeline its question encoder."""
+    from app.retrieval import QUERY_EMBEDDER
+
+    class RecordingPipeline:
+        def __init__(self) -> None:
+            self.embedders = []
+
+        def use_embedder(self, embedder) -> None:
+            self.embedders.append(embedder)
+
+    pipeline = RecordingPipeline()
+    monkeypatch.setattr("app.server.INGESTION_PIPELINE", pipeline)
+    RagWebApplication(isolated_settings, authentication=AuthenticationService(isolated_settings))
+    assert pipeline.embedders == [QUERY_EMBEDDER]

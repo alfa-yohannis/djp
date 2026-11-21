@@ -35,7 +35,7 @@ from .config import SETTINGS, Settings
 from .conversations import CONVERSATION_STORE
 from .embeddings import ComputeDeviceResolver
 from .extractors import EXTRACTOR_REGISTRY
-from .ingestion import AUTOMATIC_INGESTION, INGESTION_RUNNER, TEXT_EMBEDDER, AutomaticIngestion
+from .ingestion import AUTOMATIC_INGESTION, INGESTION_PIPELINE, INGESTION_RUNNER, AutomaticIngestion
 from .rag import LANGUAGE_MODEL_FACTORY, QuestionRequest, RagEngine
 from .retrieval import CROSS_ENCODER_RERANKER, QUERY_EMBEDDER, HybridRetriever
 from .safety import SOURCE_GUARD
@@ -190,6 +190,9 @@ class RagWebApplication:
             embedder=QUERY_EMBEDDER,
             reranker=CROSS_ENCODER_RERANKER,
         )
+        # Indexing started here (the admin button) shares the question encoder,
+        # so it never leaves a CUDA context on the GPU the answering model needs.
+        INGESTION_PIPELINE.use_embedder(QUERY_EMBEDDER)
         self._engine = RagEngine(
             settings=settings,
             retriever=self._retriever,
@@ -416,7 +419,7 @@ class RagWebApplication:
                     "embedding_model": self._settings.embedding_model_name,
                     "embedding_device": QUERY_EMBEDDER.device,
                     "embedding_loaded": QUERY_EMBEDDER.is_loaded,
-                    "indexing_embedding_device": TEXT_EMBEDDER.device,
+                    "indexing_embedding_device": INGESTION_PIPELINE.embedding_device,
                     "reranking_backend": CROSS_ENCODER_RERANKER.backend_name,
                     "reranking_model": self._settings.reranking_model_name,
                     "reranking_enabled": CROSS_ENCODER_RERANKER.is_enabled,

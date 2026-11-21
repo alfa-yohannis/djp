@@ -68,8 +68,8 @@ tidak lagi sebanding dengan yang baru.
 | Variabel | Bawaan | Keterangan |
 |---|---|---|
 | `EMBED_MODEL` | `BAAI/bge-m3` | Multibahasa, kuat untuk Bahasa Indonesia |
-| `EMBED_DEVICE` | `auto` | Perangkat untuk indexing: `auto` / `cuda` / `cpu` |
-| `QUERY_EMBED_DEVICE` | `cpu` | Perangkat untuk meng-embed pertanyaan saat melayani |
+| `EMBED_DEVICE` | `auto` | Perangkat untuk `main.py ingest`: `auto` / `cuda` / `cpu` |
+| `QUERY_EMBED_DEVICE` | `cpu` | Perangkat untuk pertanyaan, dan untuk indexing yang dijalankan server |
 | `EMBED_BATCH_SIZE` | `8` | Turunkan bila VRAM sempit |
 | `EMBED_DIM` | `1024` | Lebar vektor BGE-M3 |
 
@@ -78,9 +78,21 @@ tidak lagi sebanding dengan yang baru.
 Namun BGE-M3 di GPU memakan ±2,3 GB. Ditambah desktop (±0,7–1 GB) dan Qwen3 8B
 (±5,9 GB), totalnya melebihi kartu 8 GB, dan Windows diam-diam memindahkan
 sebagian memori GPU ke RAM sistem. Akibatnya model bahasa membaca prompt ±7×
-lebih lambat (334 vs 2.338 token/detik) dan jawaban ±4× lebih lambat. Indexing
-tetap memakai GPU (`EMBED_DEVICE`), dan salinan GPU itu dilepas setiap kali
-proses indexing di server selesai.
+lebih lambat (334 vs 2.338 token/detik) dan jawaban ±4× lebih lambat.
+
+**Indexing dari server juga di CPU.** Begitu sebuah model pernah berjalan di
+GPU, proses itu menahan ±1,4 GB memori GPU (konteks CUDA) sampai prosesnya
+berhenti; melepas modelnya tidak membebaskannya. Indexing dari halaman admin
+(dan indexing otomatis) berjalan di dalam server yang hidup terus, jadi ia
+memakai encoder pertanyaan di CPU. Harganya kecepatan: ±1,5 passage/detik,
+atau ±11 menit untuk 1.000 passage baru. Untuk indexing besar, misalnya
+`--rebuild` atau setelah menambah banyak dokumen, pakai baris perintah, yang
+memakai GPU (`EMBED_DEVICE`) dalam proses tersendiri, lalu mulai ulang server
+agar vektor barunya dimuat:
+
+```powershell
+.\.venv\Scripts\python.exe main.py ingest
+```
 
 Mengganti `EMBED_MODEL` **wajib** diikuti `ingest --rebuild`. Vektor dari dua
 model berbeda tidak sebanding; bila dimensinya juga berbeda, pencarian akan

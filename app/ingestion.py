@@ -420,14 +420,33 @@ class IngestionPipeline:
         self.progress.record_message("Selesai.")
         return self.progress.as_dictionary()
 
-    def release_embedder(self) -> None:
-        """Unload the embedding model used for indexing, freeing its memory.
+    @property
+    def embedding_device(self) -> str:
+        """The device the indexing embedder runs on, for the status panel."""
+        return str(getattr(self._embedder, "device", "cpu"))
 
-        An embedder without ``unload`` (a test stand-in, say) holds nothing to
-        free, so it is left alone rather than failing the indexing thread.
+    def use_embedder(self, embedder) -> None:
+        """Index with ``embedder`` from now on.
+
+        The web server passes its question encoder, which runs on the CPU by
+        default. Once a model has run on the GPU, the process keeps a CUDA
+        context of about 1.4 GB until it exits -- unloading the model does not
+        free it -- and the answering model then no longer fits on the 8 GB
+        card. Indexing inside the long-running server therefore stays off the
+        GPU; ``main.py ingest`` runs in its own process and may use it.
+        """
+        self._embedder = embedder
+
+    def release_embedder(self) -> None:
+        """Unload the indexing model if it holds GPU memory.
+
+        A model on the CPU is kept: in the server it is the shared question
+        encoder, which the next question would otherwise have to reload. An
+        embedder without ``unload`` (a test stand-in, say) is left alone rather
+        than failing the indexing thread.
         """
         unload = getattr(self._embedder, "unload", None)
-        if unload is not None:
+        if unload is not None and self.embedding_device.startswith("cuda"):
             unload()
 
     def _forget_documents_missing_vectors(self, stored_signatures: dict[str, str]) -> None:
