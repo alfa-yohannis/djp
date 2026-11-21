@@ -112,10 +112,7 @@ mengembalikan hasil kosong disertai peringatan di log.
 
 Reranker sengaja tidak di GPU: VRAM 8 GB dibutuhkan model bahasa.
 
-**OpenVINO int8.** Lewat PyTorch, menilai 24 kandidat butuh ±9,4 detik per
-pertanyaan di CPU 20 inti. Model yang sama, dikonversi ke OpenVINO dan
-dikompresi ke int8, butuh ±3,1 detik dan memilih 95 % passage yang sama
-(diukur pada proyek saudara akreditasi, `evaluation_results/` di github.com/alfa-yohannis/akreditasi). Buat model int8 sekali saja:
+**OpenVINO int8.** Diukur pada proyek ini (21 November 2026), dengan 20 pertanyaan pada korpus pajak: lewat PyTorch, menilai 24 kandidat butuh ±11,6 detik per pertanyaan di CPU 20 inti; model yang sama, dikonversi ke OpenVINO dan dikompresi ke int8 (dikalibrasi dengan indeks proyek ini sendiri), butuh ±3,5 detik dan memilih rata-rata 95,0 % passage yang sama (keenamnya identik pada 14 dari 20 pertanyaan). Buat model int8 sekali saja:
 
 ```powershell
 .\.venv\Scripts\python.exe main.py convert-reranker
