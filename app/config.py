@@ -280,16 +280,27 @@ class Settings:
         #: Multilingual embedding model; BGE-M3 handles Indonesian well.
         self.embedding_model_name: str = reader.text("EMBED_MODEL", "BAAI/bge-m3")
         #: Device for indexing. "auto" resolves to cuda when a GPU is present,
-        #: else cpu. Used by `main.py ingest`, which runs in its own process.
+        #: else cpu. Indexing started inside the server runs this model in a
+        #: separate process that ends with the run: a model that once ran on
+        #: the GPU leaves ~1.4 GB there until its process exits, which in the
+        #: server would crowd out the answering model.
         self.embedding_device: str = reader.text("EMBED_DEVICE", "auto")
-        #: Device for embedding questions while serving, and for indexing the
-        #: server itself starts. CPU by default: one question takes about 44 ms
-        #: there (11 ms on the GPU), but keeping the 2.3 GB model off the 8 GB
-        #: card leaves the language model all of it, which makes answers about
-        #: four times faster (measured in the akreditasi sister project, evaluation_results/). A model that once ran on the
-        #: GPU leaves ~1.4 GB there until the process exits, so the server never
-        #: indexes on the GPU either (about 1.5 passages/s on the CPU).
+        #: Device for embedding questions while serving. CPU by default: one
+        #: question takes about 44 ms there (11 ms on the GPU), but keeping the
+        #: 2.3 GB model off the 8 GB card leaves the language model all of it,
+        #: which makes answers about four times faster (measured in the akreditasi sister project, evaluation_results/).
         self.query_embedding_device: str = reader.text("QUERY_EMBED_DEVICE", "cpu")
+        #: "openvino" encodes questions with an int8 copy of the model (about
+        #: 0.6 GB of RAM instead of 2.3 GB), built once by
+        #: `python main.py convert-embedder`; "torch", or a missing int8 model,
+        #: uses sentence-transformers.
+        self.query_embedding_backend: str = reader.text("QUERY_EMBED_BACKEND", "openvino").lower()
+        self.query_embedding_openvino_directory: Path = reader.path(
+            "QUERY_EMBED_OPENVINO_DIR", PROJECT_ROOT / "data" / "models" / "openvino" / "bge-m3" / "int8"
+        )
+        #: Load the question encoder and the reranker in the background as the
+        #: server starts, so the first question does not wait for them.
+        self.preload_models: bool = reader.flag("PRELOAD_MODELS", True)
         self.embedding_batch_size: int = reader.integer("EMBED_BATCH_SIZE", 8)
         #: Output width of the embedding model; BGE-M3 produces 1024 dimensions.
         self.embedding_dimensions: int = reader.integer("EMBED_DIM", 1024)

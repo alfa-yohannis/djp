@@ -138,6 +138,10 @@ class DocumentCatalogue:
         self._settings = settings
         self._database_path: Path = guard.assert_writable(settings.database_path)
         self._access_lock = threading.RLock()
+        #: True once passage text has been added or removed since the last
+        #: ``optimise``. Compacting an unchanged full-text index rewrites
+        #: hundreds of megabytes for nothing.
+        self._search_index_changed = False
         self._query_builder = KeywordQueryBuilder()
         self._connection = sqlite3.connect(
             self._database_path, check_same_thread=False, timeout=30.0
@@ -249,6 +253,8 @@ class DocumentCatalogue:
                 f"DELETE FROM documents WHERE document_id IN ({placeholders})", document_ids
             )
             self._connection.commit()
+            if removed_chunk_ids:
+                self._search_index_changed = True
         return removed_chunk_ids
 
     def save_document(
@@ -324,16 +330,26 @@ class DocumentCatalogue:
                     (chunk_id, chunk.text),
                 )
             self._connection.commit()
+            if chunks:
+                self._search_index_changed = True
         return assigned_chunk_ids
 
     def optimise(self) -> None:
-        """Compact the full-text index after a large ingest run."""
+        """Compact the full-text index after an ingest run that changed it.
+
+        Skipped when no passage was added or removed since the last call: an
+        incremental run that found nothing new would otherwise rewrite the
+        whole index, which on a large corpus keeps a slow disk busy for minutes.
+        """
         with self._access_lock:
+            if not self._search_index_changed:
+                return
             try:
                 self._connection.execute(
                     "INSERT INTO chunk_search(chunk_search) VALUES('optimize')"
                 )
                 self._connection.commit()
+                self._search_index_changed = False
             except sqlite3.OperationalError as error:
                 LOGGER.warning("Optimisasi indeks teks gagal: %s", error)
 
@@ -346,6 +362,8 @@ class DocumentCatalogue:
             self._connection.execute("DELETE FROM chunks")
             self._connection.execute("DELETE FROM documents")
             self._connection.commit()
+            if removed_chunk_ids:
+                self._search_index_changed = True
         return removed_chunk_ids
 
     # --- Reading ------------------------------------------------------------
@@ -557,6 +575,8 @@ class VectorIndex:
         self._settings = settings
         self._archive_path: Path = guard.assert_writable(settings.vector_store_path)
         self._access_lock = threading.RLock()
+        #: True when the vectors in memory differ from the archive on disk.
+        self._has_unsaved_changes = False
         self._chunk_ids: np.ndarray = np.zeros((0,), dtype=np.int64)
         self._vectors: np.ndarray = np.zeros(
             (0, settings.embedding_dimensions), dtype=np.float32
@@ -586,14 +606,24 @@ class VectorIndex:
             with np.load(self._archive_path) as archive:
                 self._chunk_ids = archive["chunk_ids"].astype(np.int64)
                 self._vectors = archive["vectors"].astype(np.float32)
+            self._has_unsaved_changes = False
             LOGGER.info("Memuat %d vektor dari %s", self.size, self._archive_path)
         except Exception as error:
             LOGGER.warning("Gagal memuat indeks vektor, memulai kosong: %s", error)
             self._chunk_ids = np.zeros((0,), dtype=np.int64)
             self._vectors = np.zeros((0, self._settings.embedding_dimensions), dtype=np.float32)
 
+    @property
+    def has_unsaved_changes(self) -> bool:
+        """True when the vectors in memory differ from the archive on disk."""
+        return self._has_unsaved_changes
+
     def save(self) -> None:
         """Atomically persist the vectors, via a temporary file and replace.
+
+        Nothing is written when the vectors are unchanged since the last load
+        or save: the archive runs to hundreds of megabytes on a large corpus,
+        and an indexing run that found nothing new used to rewrite it anyway.
 
         The archive is written through an open file handle rather than a path:
         given a path, ``savez`` appends its own ``.npz`` suffix, which would
@@ -604,10 +634,13 @@ class VectorIndex:
         the lock that searches wait on — while ingest saves every 25 documents.
         """
         with self._access_lock:
+            if not self._has_unsaved_changes:
+                return
             temporary_path = self._archive_path.with_name(self._archive_path.name + ".tmp")
             with open(temporary_path, "wb") as archive_file:
                 np.savez(archive_file, chunk_ids=self._chunk_ids, vectors=self._vectors)
             temporary_path.replace(self._archive_path)
+            self._has_unsaved_changes = False
             LOGGER.info("Menyimpan %d vektor ke %s", self.size, self._archive_path)
 
     def add(self, chunk_ids: list[int], vectors: np.ndarray) -> None:
@@ -623,6 +656,7 @@ class VectorIndex:
             else:
                 self._chunk_ids = np.concatenate([self._chunk_ids, incoming_ids])
                 self._vectors = np.vstack([self._vectors, incoming_vectors])
+            self._has_unsaved_changes = True
 
     def remove(self, chunk_ids: list[int]) -> None:
         """Drop vectors for chunks that were deleted or are being re-indexed."""
@@ -630,13 +664,18 @@ class VectorIndex:
             return
         with self._access_lock:
             doomed = np.isin(self._chunk_ids, np.asarray(chunk_ids, dtype=np.int64))
+            if not doomed.any():
+                return
             keep = ~doomed
             self._chunk_ids = self._chunk_ids[keep]
             self._vectors = self._vectors[keep]
+            self._has_unsaved_changes = True
 
     def clear(self) -> None:
         """Empty the index entirely."""
         with self._access_lock:
+            if self.size:
+                self._has_unsaved_changes = True
             self._chunk_ids = np.zeros((0,), dtype=np.int64)
             self._vectors = np.zeros((0, self._settings.embedding_dimensions), dtype=np.float32)
 

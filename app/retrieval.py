@@ -170,5 +170,11 @@ class HybridRetriever:
 CROSS_ENCODER_RERANKER = CrossEncoderReranker(SETTINGS)
 
 #: Embeds questions while serving, on QUERY_EMBED_DEVICE (CPU by default) so
-#: the GPU stays free for the language model. Indexing uses its own instance.
-QUERY_EMBEDDER = TextEmbedder(SETTINGS, device=SETTINGS.query_embedding_device)
+#: the GPU stays free for the language model, through OpenVINO int8 when that
+#: model has been built. Indexing uses its own instance.
+QUERY_EMBEDDER = TextEmbedder(
+    SETTINGS,
+    device=SETTINGS.query_embedding_device,
+    backend=SETTINGS.query_embedding_backend,
+    openvino_directory=SETTINGS.query_embedding_openvino_directory,
+)

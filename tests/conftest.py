@@ -38,6 +38,7 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settin
         "CHUNK_TOKENS", "CHUNK_OVERLAP_TOKENS", "MIN_CHUNK_CHARS",
         "TOP_K", "RRF_K", "MAX_CONTEXT_CHARS", "LLM_BACKEND",
         "OCR_ENABLED", "RERANK_ENABLED", "RERANK_BACKEND", "RERANK_OPENVINO_DIR",
+        "QUERY_EMBED_DEVICE", "QUERY_EMBED_BACKEND", "QUERY_EMBED_OPENVINO_DIR", "PRELOAD_MODELS",
         "EMBED_DIM", "MAX_FILE_MB",
         "HOST", "PORT", "ALLOW_OPEN_FILE",
         "HISTORY_TURNS", "MAX_HISTORY_CHARS", "FOLLOW_UP_WORDS",
@@ -55,6 +56,7 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settin
     settings.additional_source_directories = []
     # An empty location, so no test ever loads the real converted reranker.
     settings.reranking_openvino_directory = tmp_path / "openvino-reranker" / "int8"
+    settings.query_embedding_openvino_directory = tmp_path / "openvino-embedder" / "int8"
     settings.source_directory.mkdir(parents=True, exist_ok=True)
     settings.create_directories()
     return settings

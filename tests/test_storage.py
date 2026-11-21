@@ -342,3 +342,53 @@ class TestVectorIndex:
         isolated_settings.data_directory = isolated_settings.source_directory / "idx"
         with pytest.raises(SourceWriteAttempt):
             VectorIndex(isolated_settings, guard)
+
+
+class TestWritingOnlyWhatChanged:
+    """An indexing run that found nothing new must not rewrite the stores.
+
+    On a large corpus the vector archive runs to hundreds of megabytes and the
+    full-text index's 'optimize' rewrites it whole; doing either for nothing
+    kept a slow disk busy for minutes after every automatic run.
+    """
+
+    def test_unchanged_vectors_are_not_saved(self, vector_index, isolated_settings):
+        vector_index.save()
+        assert not isolated_settings.vector_store_path.exists()
+
+    def test_added_vectors_are_saved_once(self, vector_index, isolated_settings):
+        vector_index.add([1, 2], np.eye(2, 4, dtype=np.float32))
+        assert vector_index.has_unsaved_changes
+        vector_index.save()
+        written_at = isolated_settings.vector_store_path.stat().st_mtime_ns
+        assert not vector_index.has_unsaved_changes
+
+        vector_index.save()
+        assert isolated_settings.vector_store_path.stat().st_mtime_ns == written_at
+
+    def test_removing_unknown_ids_changes_nothing(self, vector_index):
+        vector_index.add([1], np.eye(1, 4, dtype=np.float32))
+        vector_index.save()
+        vector_index.remove([99])
+        assert not vector_index.has_unsaved_changes
+
+    def test_removing_a_vector_marks_the_index_changed(self, vector_index):
+        vector_index.add([1, 2], np.eye(2, 4, dtype=np.float32))
+        vector_index.save()
+        vector_index.remove([2])
+        assert vector_index.has_unsaved_changes
+
+    def test_optimise_runs_only_after_passages_change(self, catalogue):
+        statements: list[str] = []
+        catalogue._connection.set_trace_callback(statements.append)
+
+        catalogue.optimise()
+        assert not [s for s in statements if "optimize" in s]
+
+        document = build_document("a.txt")
+        catalogue.save_document(document, build_chunks(document.document_id, ["satu dua tiga"]),
+                                section_count=1, character_count=13, scanned_section_count=0,
+                                ocr_section_count=0, status="indexed")
+        catalogue.optimise()
+        catalogue.optimise()
+        assert len([s for s in statements if "optimize" in s]) == 1

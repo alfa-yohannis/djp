@@ -20,6 +20,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Iterator
@@ -33,7 +34,7 @@ from .answer_streams import AnswerFrameStreamer, AnswerJobRegistry, ServerSentEv
 from .authentication import AUTHENTICATION_SERVICE, AuthenticationService, Principal
 from .config import SETTINGS, Settings
 from .conversations import CONVERSATION_STORE
-from .embeddings import ComputeDeviceResolver
+from .embeddings import ComputeDeviceResolver, SubprocessEmbedder
 from .extractors import EXTRACTOR_REGISTRY
 from .ingestion import AUTOMATIC_INGESTION, INGESTION_PIPELINE, INGESTION_RUNNER, AutomaticIngestion
 from .rag import LANGUAGE_MODEL_FACTORY, QuestionRequest, RagEngine
@@ -190,9 +191,10 @@ class RagWebApplication:
             embedder=QUERY_EMBEDDER,
             reranker=CROSS_ENCODER_RERANKER,
         )
-        # Indexing started here (the admin button) shares the question encoder,
-        # so it never leaves a CUDA context on the GPU the answering model needs.
-        INGESTION_PIPELINE.use_embedder(QUERY_EMBEDDER)
+        # Indexing started here (the admin button) encodes in a child process
+        # that ends with the run, so it keeps the GPU's speed but never leaves
+        # a CUDA context in this process, on the card the answering model needs.
+        INGESTION_PIPELINE.use_embedder(SubprocessEmbedder(settings))
         self._engine = RagEngine(
             settings=settings,
             retriever=self._retriever,
@@ -418,6 +420,7 @@ class RagWebApplication:
                 "models": {
                     "embedding_model": self._settings.embedding_model_name,
                     "embedding_device": QUERY_EMBEDDER.device,
+                    "embedding_backend": QUERY_EMBEDDER.backend_name,
                     "embedding_loaded": QUERY_EMBEDDER.is_loaded,
                     "indexing_embedding_device": INGESTION_PIPELINE.embedding_device,
                     "reranking_backend": CROSS_ENCODER_RERANKER.backend_name,
@@ -709,7 +712,35 @@ class ApplicationBootstrapper:
         self.configure_logging()
         self.verify_safety_invariants()
         application = RagWebApplication(self._settings)
+        if self._settings.preload_models:
+            self.start_model_preload()
         return application.api
+
+    @staticmethod
+    def start_model_preload() -> threading.Thread:
+        """Load the question encoder and the reranker in the background.
+
+        Both otherwise load on the first question, which then waits 20-30 s
+        (minutes if the disk is busy). Loading is guarded by each model's own
+        lock, so a question arriving meanwhile simply waits for it.
+        """
+
+        def preload() -> None:
+            for name, model in (("embedding", QUERY_EMBEDDER), ("reranking", CROSS_ENCODER_RERANKER)):
+                try:
+                    model.load()
+                except Exception:
+                    LOGGER.exception("Pramuat model %s gagal", name)
+            LOGGER.info(
+                "Model siap: embedding %s/%s, reranking %s",
+                QUERY_EMBEDDER.device,
+                QUERY_EMBEDDER.backend_name,
+                CROSS_ENCODER_RERANKER.backend_name,
+            )
+
+        thread = threading.Thread(target=preload, name="pramuat-model", daemon=True)
+        thread.start()
+        return thread
 
 
 def create_application() -> FastAPI:

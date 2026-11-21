@@ -423,26 +423,15 @@ class TestAutomaticIngestion:
 
 
 class TestReleaseEmbedder:
-    """Freeing the indexing model's GPU memory once a run is over."""
+    """Freeing the indexing model's memory once a run is over."""
 
-    def test_unloads_an_embedder_on_the_gpu(self, pipeline):
+    def test_unloads_an_embedder_that_can(self, pipeline):
         calls = []
-        pipeline.embedder.device = "cuda"
         pipeline.embedder.unload = lambda: calls.append("unloaded")
         pipeline.release_embedder()
         assert calls == ["unloaded"]
 
-    def test_keeps_an_embedder_on_the_cpu(self, pipeline):
-        """In the server it is the shared question encoder; unloading it would
-        make the next question reload the model."""
-        calls = []
-        pipeline.embedder.device = "cpu"
-        pipeline.embedder.unload = lambda: calls.append("unloaded")
-        pipeline.release_embedder()
-        assert calls == []
-
     def test_leaves_an_embedder_without_unload_alone(self, pipeline):
-        pipeline.embedder.device = "cuda"
         assert not hasattr(pipeline.embedder, "unload")
         pipeline.release_embedder()  # must not raise in the indexing thread
 

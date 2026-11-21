@@ -142,11 +142,11 @@ class TestCancellingAnAnswer:
         assert client.post("/api/answers/tidak-ada/cancel").status_code == 404
 
 
-def test_server_indexes_with_the_question_encoder(isolated_settings, monkeypatch):
-    """Indexing inside the server must not put a model on the GPU: a CUDA
-    context stays in the process after the run and crowds out the answering
-    model. The server therefore hands the pipeline its question encoder."""
-    from app.retrieval import QUERY_EMBEDDER
+def test_server_indexes_in_a_separate_process(isolated_settings, monkeypatch):
+    """Indexing inside the server must not run a model on the GPU in the
+    server's own process: the CUDA context it leaves crowds out the answering
+    model. The server therefore hands the pipeline a child-process embedder."""
+    from app.embeddings import SubprocessEmbedder
 
     class RecordingPipeline:
         def __init__(self) -> None:
@@ -158,4 +158,25 @@ def test_server_indexes_with_the_question_encoder(isolated_settings, monkeypatch
     pipeline = RecordingPipeline()
     monkeypatch.setattr("app.server.INGESTION_PIPELINE", pipeline)
     RagWebApplication(isolated_settings, authentication=AuthenticationService(isolated_settings))
-    assert pipeline.embedders == [QUERY_EMBEDDER]
+    assert len(pipeline.embedders) == 1
+    assert isinstance(pipeline.embedders[0], SubprocessEmbedder)
+
+
+def test_models_are_preloaded_in_the_background(monkeypatch):
+    """The first question should not wait for the models to load."""
+    from app.server import ApplicationBootstrapper
+
+    class Model:
+        device, backend_name = "cpu", "openvino"
+
+        def __init__(self) -> None:
+            self.loaded = False
+
+        def load(self) -> None:
+            self.loaded = True
+
+    encoder, reranker = Model(), Model()
+    monkeypatch.setattr("app.server.QUERY_EMBEDDER", encoder)
+    monkeypatch.setattr("app.server.CROSS_ENCODER_RERANKER", reranker)
+    ApplicationBootstrapper.start_model_preload().join(timeout=10)
+    assert encoder.loaded and reranker.loaded
