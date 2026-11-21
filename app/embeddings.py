@@ -63,9 +63,22 @@ class TextEmbedder:
     unlike the E5 family.
     """
 
-    def __init__(self, settings: Settings, device_resolver: ComputeDeviceResolver | None = None) -> None:
-        """Record configuration without touching the GPU or downloading weights."""
+    def __init__(
+        self,
+        settings: Settings,
+        device_resolver: ComputeDeviceResolver | None = None,
+        device: str | None = None,
+    ) -> None:
+        """Record configuration without touching the GPU or downloading weights.
+
+        Args:
+            device: Overrides ``settings.embedding_device`` for this instance.
+                The server embeds questions with a CPU instance and indexes
+                with a GPU one; both load the same model, so a question's
+                vector is comparable with the indexed passages either way.
+        """
         self._settings = settings
+        self._requested_device = device or settings.embedding_device
         self._device_resolver = device_resolver or ComputeDeviceResolver()
         self._model = None
         self._resolved_device: str | None = None
@@ -81,7 +94,7 @@ class TextEmbedder:
         """The device the model is running on, or the one it would use."""
         if self._resolved_device is not None:
             return self._resolved_device
-        return self._device_resolver.resolve(self._settings.embedding_device)
+        return self._device_resolver.resolve(self._requested_device)
 
     @property
     def dimensions(self) -> int:
@@ -99,9 +112,7 @@ class TextEmbedder:
                 return
             from sentence_transformers import SentenceTransformer
 
-            self._resolved_device = self._device_resolver.resolve(
-                self._settings.embedding_device
-            )
+            self._resolved_device = self._device_resolver.resolve(self._requested_device)
             LOGGER.info(
                 "Memuat model embedding %s pada %s",
                 self._settings.embedding_model_name,

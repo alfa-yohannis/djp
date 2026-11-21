@@ -129,10 +129,19 @@ ollama pull qwen3:8b
 Wajar bila model baru dimuat pertama kali (beberapa detik). Bila setiap
 pertanyaan lambat:
 
-- Periksa VRAM dengan `nvidia-smi`. Bila hampir penuh, ada aplikasi lain yang
-  memakai GPU.
-- Turunkan `OLLAMA_NUM_CTX` menjadi `4096`.
-- Naikkan `OLLAMA_KEEP_ALIVE` agar model tidak dilepas antar pertanyaan.
+- Buka Task Manager → Performance → GPU dan lihat **Shared GPU memory**. Bila
+  angkanya jauh di atas ±0,5 GB saat model dimuat, kartu grafis kepenuhan dan
+  Windows meminjam RAM sistem; model bisa melambat sampai sepuluh kali tanpa
+  pesan galat. `nvidia-smi` tidak menampilkan hal ini.
+- Pastikan `QUERY_EMBED_DEVICE=cpu` (bawaan), agar BGE-M3 tidak ikut menempati
+  GPU saat melayani pertanyaan.
+- Tutup aplikasi lain yang memakai GPU (game, penyuntingan video, peramban
+  dengan banyak tab video).
+- Bila masih sempit, aktifkan cache KV 8-bit pada layanan Ollama
+  (`OLLAMA_KV_CACHE_TYPE=q8_0`, lalu mulai ulang Ollama): menghemat ±0,5 GB.
+  Bila memori sudah cukup, pengaturan ini tidak menambah kecepatan.
+- Naikkan `OLLAMA_KEEP_ALIVE` agar model tidak dilepas antar pertanyaan; memuat
+  ulang menambah ±2,5 detik pada jawaban pertama.
 
 ### Jawaban memuat tag `<think>`
 

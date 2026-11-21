@@ -7,22 +7,71 @@ two independently produced vectors. That catches passages that merely share
 vocabulary with the question, which is the dominant failure mode when many
 documents in a corpus use near-identical boilerplate.
 
-The reranker runs on CPU by default. With the language model occupying roughly
-5 GB of an 8 GB card, loading a second 1.1 GB model onto the GPU risks an
-out-of-memory failure mid-answer, and 20-odd pairs score fast enough on a
-20-core CPU to stay well inside the time a user waits for a response.
+The reranker runs on the CPU, because the GPU's 8 GB belong to the language
+model. Run through PyTorch, scoring the 24 candidates takes about 9.4 s per
+question on the 20-core i7-14700F (measured in the akreditasi sister project, ``evaluation_results/``); run through
+OpenVINO as an int8 model (``RERANK_BACKEND=openvino``) the same model takes
+about 3.1 s and keeps 95 % of the same passages. The int8 model is built once
+with ``evaluation/openvino_reranker.py`` and ``evaluation/ov_quantize.py``.
 """
 
 from __future__ import annotations
 
 import logging
 import threading
+from pathlib import Path
+
+import numpy as np
 
 from .config import Settings
 from .documents import RetrievedPassage
 from .embeddings import ComputeDeviceResolver
 
 LOGGER = logging.getLogger(__name__)
+
+
+class OpenVinoCrossEncoder:
+    """The reranking model run by OpenVINO instead of PyTorch.
+
+    Offers the one method the reranker uses from sentence-transformers'
+    ``CrossEncoder`` -- ``predict(pairs, batch_size=...)`` -- and tokenises the
+    same way, so the two backends are interchangeable.
+
+    Args:
+        model_directory: Folder holding ``model.xml``/``model.bin``; the
+            tokenizer is read from the sibling ``tokenizer`` folder.
+        max_length: Token limit per question-passage pair, as for PyTorch.
+    """
+
+    def __init__(self, model_directory: Path, max_length: int = 512) -> None:
+        import openvino as ov
+        from transformers import AutoTokenizer
+
+        self._max_length = max_length
+        self._tokenizer = AutoTokenizer.from_pretrained(model_directory.parent / "tokenizer")
+        self._compiled = ov.Core().compile_model(
+            str(model_directory / "model.xml"), "CPU", {"PERFORMANCE_HINT": "LATENCY"}
+        )
+        self._output = self._compiled.output(0)
+
+    def predict(self, pairs, batch_size: int = 8, show_progress_bar: bool = False) -> np.ndarray:
+        """Score each ``(question, passage)`` pair; higher means more relevant."""
+        scores = []
+        for start in range(0, len(pairs), batch_size):
+            batch = pairs[start : start + batch_size]
+            encoded = self._tokenizer(
+                [question for question, _ in batch],
+                [passage for _, passage in batch],
+                padding=True,
+                truncation=True,
+                max_length=self._max_length,
+                return_tensors="np",
+            )
+            logits = self._compiled(
+                {"input_ids": encoded["input_ids"], "attention_mask": encoded["attention_mask"]}
+            )[self._output]
+            scores.append(np.asarray(logits, dtype=np.float32).reshape(-1))
+        return np.concatenate(scores) if scores else np.zeros((0,), dtype=np.float32)
 
 
 class CrossEncoderReranker:
@@ -69,6 +118,8 @@ class CrossEncoderReranker:
             if self._model is not None or self._load_attempted:
                 return
             self._load_attempted = True
+            if self._settings.reranking_backend == "openvino" and self._load_openvino():
+                return
             try:
                 from sentence_transformers import CrossEncoder
 
@@ -87,6 +138,30 @@ class CrossEncoderReranker:
             except Exception as error:
                 self._unavailable_reason = f"Gagal memuat model reranking: {error}"
                 LOGGER.warning(self._unavailable_reason)
+
+    def _load_openvino(self) -> bool:
+        """Try the OpenVINO model; on any failure, log it and use PyTorch instead.
+
+        Falling back rather than disabling reranking keeps answers the same
+        quality when the converted model or the ``openvino`` package is missing.
+        """
+        model_directory = self._settings.reranking_openvino_directory
+        try:
+            LOGGER.info("Memuat model reranking OpenVINO dari %s", model_directory)
+            self._model = OpenVinoCrossEncoder(model_directory)
+            return True
+        except Exception as error:
+            LOGGER.warning(
+                "Reranker OpenVINO tidak dapat dimuat (%s); memakai PyTorch.", error
+            )
+            return False
+
+    @property
+    def backend_name(self) -> str:
+        """'openvino' or 'torch' once loaded, for the status panel and logs."""
+        if isinstance(self._model, OpenVinoCrossEncoder):
+            return "openvino"
+        return "torch"
 
     def rerank(
         self, question: str, candidates: list[RetrievedPassage], keep_count: int

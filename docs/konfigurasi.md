@@ -68,9 +68,19 @@ tidak lagi sebanding dengan yang baru.
 | Variabel | Bawaan | Keterangan |
 |---|---|---|
 | `EMBED_MODEL` | `BAAI/bge-m3` | Multibahasa, kuat untuk Bahasa Indonesia |
-| `EMBED_DEVICE` | `auto` | `auto` / `cuda` / `cpu` |
+| `EMBED_DEVICE` | `auto` | Perangkat untuk indexing: `auto` / `cuda` / `cpu` |
+| `QUERY_EMBED_DEVICE` | `cpu` | Perangkat untuk meng-embed pertanyaan saat melayani |
 | `EMBED_BATCH_SIZE` | `8` | Turunkan bila VRAM sempit |
 | `EMBED_DIM` | `1024` | Lebar vektor BGE-M3 |
+
+**Mengapa pertanyaan di-embed di CPU.** Hasil pengukuran
+(diukur pada proyek saudara akreditasi, `evaluation_results/` di github.com/alfa-yohannis/akreditasi): satu pertanyaan butuh ±44 ms di CPU, ±11 ms di GPU.
+Namun BGE-M3 di GPU memakan ±2,3 GB. Ditambah desktop (±0,7–1 GB) dan Qwen3 8B
+(±5,9 GB), totalnya melebihi kartu 8 GB, dan Windows diam-diam memindahkan
+sebagian memori GPU ke RAM sistem. Akibatnya model bahasa membaca prompt ±7×
+lebih lambat (334 vs 2.338 token/detik) dan jawaban ±4× lebih lambat. Indexing
+tetap memakai GPU (`EMBED_DEVICE`), dan salinan GPU itu dilepas setiap kali
+proses indexing di server selesai.
 
 Mengganti `EMBED_MODEL` **wajib** diikuti `ingest --rebuild`. Vektor dari dua
 model berbeda tidak sebanding; bila dimensinya juga berbeda, pencarian akan
@@ -85,11 +95,24 @@ mengembalikan hasil kosong disertai peringatan di log.
 | `RERANK_ENABLED` | `1` | Matikan bila ingin jawaban lebih cepat |
 | `RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | Cross-encoder multibahasa |
 | `RERANK_DEVICE` | `cpu` | Sengaja CPU — lihat catatan di bawah |
+| `RERANK_BACKEND` | `openvino` | `openvino` (int8, ±3× lebih cepat) atau `torch` |
+| `RERANK_OPENVINO_DIR` | `data/models/openvino/bge-reranker-v2-m3/int8` | Lokasi model int8 |
 
-Reranker sengaja tidak di GPU. Bersama Qwen3 8B (±5 GB) dan BGE-M3 (±1,2 GB),
-menambahkan ±1,1 GB lagi menyisakan terlalu sedikit VRAM untuk KV cache, dan
-kegagalan memori akan muncul di tengah jawaban. Setel `RERANK_DEVICE=cuda` hanya
-bila Anda memakai model bahasa yang jauh lebih kecil.
+Reranker sengaja tidak di GPU: VRAM 8 GB dibutuhkan model bahasa.
+
+**OpenVINO int8.** Lewat PyTorch, menilai 24 kandidat butuh ±9,4 detik per
+pertanyaan di CPU 20 inti. Model yang sama, dikonversi ke OpenVINO dan
+dikompresi ke int8, butuh ±3,1 detik dan memilih 95 % passage yang sama
+(diukur pada proyek saudara akreditasi, `evaluation_results/` di github.com/alfa-yohannis/akreditasi). Buat model int8 sekali saja:
+
+```powershell
+.\.venv\Scripts\python.exe main.py convert-reranker
+```
+
+Perintah itu mengekspor model ke OpenVINO, lalu mengkuantisasi di lingkungan
+Python terpisah (`data/models/openvino/quantize-env`) karena NNCF memerlukan
+NumPy versi lebih lama daripada aplikasi. Bila model int8 belum ada, aplikasi
+otomatis memakai PyTorch.
 
 ---
 
@@ -142,6 +165,21 @@ Prasyarat:
 | `OLLAMA_KEEP_ALIVE` | `10m` | Lama model tetap dimuat |
 | `TEMPERATURE` | `0.2` | Rendah agar jawaban dekat ke teks sumber |
 | `MAX_OUTPUT_TOKENS` | `1536` | Panjang maksimum jawaban |
+
+**Mengapa Qwen3 8B dengan pengaturan bawaan Ollama.** Diuji pada 5 pertanyaan ×
+10 pengulangan (diukur pada proyek saudara akreditasi, `evaluation_results/` di github.com/alfa-yohannis/akreditasi):
+
+- Qwen3 8B, dengan BGE-M3 di CPU: kata pertama ±1,9 detik, jawaban lengkap
+  ±3,8 detik, 44 token/detik, tanpa satu pun angka atau kode yang tidak ada di
+  passage.
+- Qwen3.5 4B: kata pertama ±0,9 detik, tetapi jawabannya tiga kali lebih
+  panjang (lengkap ±4,6 detik), dan pada satu pertanyaan ia menyebut kode mata
+  kuliah yang salah di 17 dari 20 jawaban. Karena itu tidak dipakai.
+- `OLLAMA_KV_CACHE_TYPE=q8_0` (pengaturan layanan Ollama) menghemat ±0,5 GB
+  tetapi tidak mempercepat bila memori sudah cukup; *flash attention* sudah
+  aktif secara bawaan. Keduanya tidak perlu diubah.
+- Mode berpikir tetap mati, dan `TEMPERATURE=0.2` dipertahankan agar jawaban
+  dekat ke teks sumber.
 
 CLI agen:
 

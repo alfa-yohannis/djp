@@ -420,3 +420,17 @@ class TestAutomaticIngestion:
         runner._worker_thread.join(timeout=60)
         results = pipeline.catalogue.search_by_keyword("tarif PPh Pasal 21", limit=5)
         assert any("tarif" in passage.text.lower() for passage in results)
+
+
+class TestReleaseEmbedder:
+    """Freeing the indexing model's memory once a run is over."""
+
+    def test_unloads_an_embedder_that_can(self, pipeline):
+        calls = []
+        pipeline.embedder.unload = lambda: calls.append("unloaded")
+        pipeline.release_embedder()
+        assert calls == ["unloaded"]
+
+    def test_leaves_an_embedder_without_unload_alone(self, pipeline):
+        assert not hasattr(pipeline.embedder, "unload")
+        pipeline.release_embedder()  # must not raise in the indexing thread

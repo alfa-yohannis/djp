@@ -13,6 +13,10 @@ uvicorn[standard]>=0.32
 # --- Retrieval models ------------------------------------------------------
 sentence-transformers>=3.3        # BGE-M3 embeddings + BGE reranker
 numpy>=1.26                       # vector index
+openvino>=2026.4                  # int8 reranker on CPU (RERANK_BACKEND=openvino)
+# NNCF, which builds the int8 model once, is deliberately not listed: it needs
+# an older NumPy than the app. `python main.py convert-reranker` installs it in
+# a separate environment under data/models/openvino/quantize-env.
 
 # --- Document extraction ---------------------------------------------------
 pymupdf>=1.24                     # PDF text layer, page rendering for OCR

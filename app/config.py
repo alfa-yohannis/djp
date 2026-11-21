@@ -279,8 +279,14 @@ class Settings:
         # --- Embedding ------------------------------------------------------
         #: Multilingual embedding model; BGE-M3 handles Indonesian well.
         self.embedding_model_name: str = reader.text("EMBED_MODEL", "BAAI/bge-m3")
-        #: "auto" resolves to cuda when a GPU is present, else cpu.
+        #: Device for indexing. "auto" resolves to cuda when a GPU is present,
+        #: else cpu; the GPU copy is released when an indexing run finishes.
         self.embedding_device: str = reader.text("EMBED_DEVICE", "auto")
+        #: Device for embedding questions while serving. CPU by default: one
+        #: question takes about 44 ms there (11 ms on the GPU), but keeping the
+        #: 2.3 GB model off the 8 GB card leaves the language model all of it,
+        #: which makes answers about four times faster (measured in the akreditasi sister project, evaluation_results/).
+        self.query_embedding_device: str = reader.text("QUERY_EMBED_DEVICE", "cpu")
         self.embedding_batch_size: int = reader.integer("EMBED_BATCH_SIZE", 8)
         #: Output width of the embedding model; BGE-M3 produces 1024 dimensions.
         self.embedding_dimensions: int = reader.integer("EMBED_DIM", 1024)
@@ -292,6 +298,18 @@ class Settings:
         )
         #: Defaults to CPU so the 8 GB GPU stays reserved for the language model.
         self.reranking_device: str = reader.text("RERANK_DEVICE", "cpu")
+        #: "openvino" runs the model converted to int8 OpenVINO, about 3x faster
+        #: on this CPU with 95 % of the same passages kept (measured in the akreditasi sister project, evaluation_results/);
+        #: "torch" runs it through PyTorch. When the converted model is missing,
+        #: OpenVINO falls back to PyTorch, so this default is safe anywhere.
+        #: Build the converted model with `python main.py convert-reranker`.
+        self.reranking_backend: str = reader.text("RERANK_BACKEND", "openvino").lower()
+        #: Folder of the converted int8 model (model.xml); its tokenizer sits
+        #: in the sibling "tokenizer" folder.
+        self.reranking_openvino_directory: Path = reader.path(
+            "RERANK_OPENVINO_DIR",
+            PROJECT_ROOT / "data" / "models" / "openvino" / "bge-reranker-v2-m3" / "int8",
+        )
 
         # --- Retrieval ------------------------------------------------------
         #: Candidates pulled from the vector index before fusion.

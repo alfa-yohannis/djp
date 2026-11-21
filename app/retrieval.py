@@ -168,3 +168,7 @@ class HybridRetriever:
 
 #: Shared reranker and retriever bound to the process-wide stores and models.
 CROSS_ENCODER_RERANKER = CrossEncoderReranker(SETTINGS)
+
+#: Embeds questions while serving, on QUERY_EMBED_DEVICE (CPU by default) so
+#: the GPU stays free for the language model. Indexing uses its own instance.
+QUERY_EMBEDDER = TextEmbedder(SETTINGS, device=SETTINGS.query_embedding_device)

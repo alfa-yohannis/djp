@@ -37,7 +37,8 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settin
         "SOURCE_DIR", "EXTRA_SOURCE_DIRS", "DATA_DIR", "EXCLUDE_DIRS", "TEXT_EXTENSIONS",
         "CHUNK_TOKENS", "CHUNK_OVERLAP_TOKENS", "MIN_CHUNK_CHARS",
         "TOP_K", "RRF_K", "MAX_CONTEXT_CHARS", "LLM_BACKEND",
-        "OCR_ENABLED", "RERANK_ENABLED", "EMBED_DIM", "MAX_FILE_MB",
+        "OCR_ENABLED", "RERANK_ENABLED", "RERANK_BACKEND", "RERANK_OPENVINO_DIR",
+        "EMBED_DIM", "MAX_FILE_MB",
         "HOST", "PORT", "ALLOW_OPEN_FILE",
         "HISTORY_TURNS", "MAX_HISTORY_CHARS", "FOLLOW_UP_WORDS",
         "CLAUDE_CLI_MODEL", "CLAUDE_CLI_EFFORT", "CLAUDE_CLI_TIMEOUT",
@@ -52,6 +53,8 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settin
     # Cleared deliberately: the default points at the project's real
     # `corpus-lokal`, which the suite must never read or depend on.
     settings.additional_source_directories = []
+    # An empty location, so no test ever loads the real converted reranker.
+    settings.reranking_openvino_directory = tmp_path / "openvino-reranker" / "int8"
     settings.source_directory.mkdir(parents=True, exist_ok=True)
     settings.create_directories()
     return settings

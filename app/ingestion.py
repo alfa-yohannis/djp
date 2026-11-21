@@ -420,6 +420,16 @@ class IngestionPipeline:
         self.progress.record_message("Selesai.")
         return self.progress.as_dictionary()
 
+    def release_embedder(self) -> None:
+        """Unload the embedding model used for indexing, freeing its memory.
+
+        An embedder without ``unload`` (a test stand-in, say) holds nothing to
+        free, so it is left alone rather than failing the indexing thread.
+        """
+        unload = getattr(self._embedder, "unload", None)
+        if unload is not None:
+            unload()
+
     def _forget_documents_missing_vectors(self, stored_signatures: dict[str, str]) -> None:
         """Drop the stored signature of any document whose vectors were lost.
 
@@ -654,6 +664,12 @@ class IngestionRunner:
             self._pipeline.run(force_full_rebuild=force_full_rebuild)
         except Exception:
             LOGGER.exception("Proses indexing latar belakang berhenti")
+        finally:
+            # Hand the GPU back to the language model. Left resident, the
+            # indexing copy of the embedding model pushes the language model
+            # past the 8 GB card into system memory and slows answers about
+            # fourfold; the next run simply loads it again.
+            self._pipeline.release_embedder()
 
     def current_progress(self) -> dict:
         """Snapshot the running (or last completed) run's progress."""

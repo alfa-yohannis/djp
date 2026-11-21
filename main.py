@@ -109,6 +109,10 @@ class CommandLineInterface:
             help="Hanya ambil halaman, jangan langsung mengindeks",
         )
 
+        subparsers.add_parser(
+            "convert-reranker",
+            help="Buat model reranking OpenVINO int8 (sekali saja; RERANK_BACKEND=openvino)",
+        )
         subparsers.add_parser("status", help="Tampilkan ringkasan indeks dan backend")
         subparsers.add_parser(
             "hash-password", help="Buat hash kata sandi untuk ADMIN_ atau GUEST_PASSWORD_HASH"
@@ -129,6 +133,7 @@ class CommandLineInterface:
             "snapshot": self._run_snapshot,
             "crawl": self._run_crawl,
             "hash-password": self._run_hash_password,
+            "convert-reranker": self._run_convert_reranker,
         }
         return handlers[command](parsed)
 
@@ -173,6 +178,12 @@ class CommandLineInterface:
     def _report_crawl_progress(self, section: str, done: int, total: int, url: str) -> None:
         """Print one progress line per crawled page."""
         print(f"  [{section} {done}/{total}] {url}", flush=True)
+
+    def _run_convert_reranker(self, _parsed: argparse.Namespace) -> int:
+        """Build the int8 OpenVINO reranker into RERANK_OPENVINO_DIR."""
+        from evaluation.openvino_reranker import convert_for_app
+
+        return convert_for_app()
 
     def _run_hash_password(self, _parsed: argparse.Namespace) -> int:
         """Prompt for a password twice and print its hash for `.env`."""
@@ -346,14 +357,14 @@ class CommandLineInterface:
         from app.embeddings import TextEmbedder  # noqa: F401  (warms the import chain)
         from app.ingestion import TEXT_EMBEDDER
         from app.rag import LANGUAGE_MODEL_FACTORY, QuestionRequest, RagEngine
-        from app.retrieval import CROSS_ENCODER_RERANKER, HybridRetriever
+        from app.retrieval import CROSS_ENCODER_RERANKER, QUERY_EMBEDDER, HybridRetriever
         from app.storage import DOCUMENT_CATALOGUE, VECTOR_INDEX
 
         retriever = HybridRetriever(
             settings=SETTINGS,
             catalogue=DOCUMENT_CATALOGUE,
             vector_index=VECTOR_INDEX,
-            embedder=TEXT_EMBEDDER,
+            embedder=QUERY_EMBEDDER,
             reranker=CROSS_ENCODER_RERANKER,
         )
         engine = RagEngine(SETTINGS, retriever, LANGUAGE_MODEL_FACTORY)
