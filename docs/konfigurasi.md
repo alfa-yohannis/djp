@@ -70,7 +70,7 @@ tidak lagi sebanding dengan yang baru.
 | `EMBED_MODEL` | `BAAI/bge-m3` | Multibahasa, kuat untuk Bahasa Indonesia |
 | `EMBED_DEVICE` | `auto` | Perangkat untuk indexing: `auto` / `cuda` / `cpu` |
 | `QUERY_EMBED_DEVICE` | `cpu` | Perangkat untuk meng-embed pertanyaan saat melayani |
-| `QUERY_EMBED_BACKEND` | `openvino` | `openvino` (int8, ±0,6 GB RAM) atau `torch` (±2,3 GB) |
+| `QUERY_EMBED_BACKEND` | `torch` | `torch` atau `openvino` (int8; tidak menghemat RAM, lihat di bawah) |
 | `QUERY_EMBED_OPENVINO_DIR` | `data/models/openvino/bge-m3/int8` | Lokasi model int8 pertanyaan |
 | `PRELOAD_MODELS` | `1` | Muat model pertanyaan dan reranker saat server mulai |
 | `EMBED_BATCH_SIZE` | `8` | Turunkan bila VRAM sempit |
@@ -83,12 +83,7 @@ Namun BGE-M3 di GPU memakan ±2,3 GB. Ditambah desktop (±0,7–1 GB) dan Qwen3 
 sebagian memori GPU ke RAM sistem. Akibatnya model bahasa membaca prompt ±7×
 lebih lambat (334 vs 2.338 token/detik) dan jawaban ±4× lebih lambat.
 
-**Pertanyaan di-embed lewat OpenVINO int8.** Model yang sama, dikonversi dan
-dikompresi ke int8, hanya memakai ±0,6 GB RAM, bukan ±2,3 GB; penting karena
-tiga server di komputer ini masing-masing memuatnya. Passage di indeks tetap
-memakai vektor presisi penuh. Diukur pada proyek ini (21 November 2026), dengan 20 pertanyaan dari log percakapan dan cuplikan korpus pajak: kemiripan vektor rata-rata 0,995; model bahasa menerima rata-rata 95 % passage yang sama (keenamnya identik pada 14 dari 20 pertanyaan); satu pertanyaan di-embed dalam ±46 ms. Cek ulang kapan saja dengan
-`python -m evaluation.openvino_embedder verify`. Buat model int8 sekali saja;
-bila belum ada, aplikasi otomatis memakai PyTorch:
+**OpenVINO int8 untuk pertanyaan: dicoba, tidak dipakai.** Salinan int8 BGE-M3 hanya 0,5 GB di disk, tetapi OpenVINO mengembangkan bobotnya saat dimuat: diukur 21 November 2026, ia memakai ±2,9 GB RAM, sedangkan PyTorch ±2,1 GB. Kecepatannya untuk satu pertanyaan hampir sama, dan model bahasa menerima 91–95 % passage yang sama. Karena tidak ada yang dihemat, bawaannya `torch`. Untuk mencoba sendiri: `python -m evaluation.openvino_embedder verify` mengukur kesesuaiannya. Model int8 dibuat dengan:
 
 ```powershell
 .\.venv\Scripts\python.exe main.py convert-embedder

@@ -290,11 +290,13 @@ class Settings:
         #: 2.3 GB model off the 8 GB card leaves the language model all of it,
         #: which makes answers about four times faster (measured in the akreditasi sister project, evaluation_results/).
         self.query_embedding_device: str = reader.text("QUERY_EMBED_DEVICE", "cpu")
-        #: "openvino" encodes questions with an int8 copy of the model (about
-        #: 0.6 GB of RAM instead of 2.3 GB), built once by
-        #: `python main.py convert-embedder`; "torch", or a missing int8 model,
-        #: uses sentence-transformers.
-        self.query_embedding_backend: str = reader.text("QUERY_EMBED_BACKEND", "openvino").lower()
+        #: "torch" (sentence-transformers) by default. "openvino" encodes
+        #: questions with an int8 copy built by `python main.py convert-embedder`;
+        #: measured on 21 November 2026 it saved no RAM (2.9 GB working set
+        #: against 2.1 GB for PyTorch, as OpenVINO expands the weights when it
+        #: loads them), gained little speed on single questions and changed
+        #: 5-9 % of the passages the answering model reads, so it stays off.
+        self.query_embedding_backend: str = reader.text("QUERY_EMBED_BACKEND", "torch").lower()
         self.query_embedding_openvino_directory: Path = reader.path(
             "QUERY_EMBED_OPENVINO_DIR", PROJECT_ROOT / "data" / "models" / "openvino" / "bge-m3" / "int8"
         )

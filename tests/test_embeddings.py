@@ -52,8 +52,9 @@ def stand_in_sentence_transformers(monkeypatch):
 
 
 class TestQuestionEncoderBackend:
-    def test_default_backend_is_openvino(self, isolated_settings):
-        assert isolated_settings.query_embedding_backend == "openvino"
+    def test_default_backend_is_torch(self, isolated_settings):
+        """int8 saved no RAM for the question encoder, so it is opt-in."""
+        assert isolated_settings.query_embedding_backend == "torch"
 
     def test_missing_openvino_model_falls_back_to_torch(
         self, isolated_settings, tmp_path, stand_in_sentence_transformers
