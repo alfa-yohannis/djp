@@ -198,3 +198,30 @@ class TestSubprocessEmbedder:
 
     def test_reports_the_device_it_encodes_on(self, isolated_settings):
         assert self.make_embedder(isolated_settings).device == "cuda"
+
+
+class TestQuestionEncoderThreads:
+    def test_cpu_threads_limit_pytorch_on_the_cpu(
+        self, isolated_settings, monkeypatch, stand_in_sentence_transformers
+    ):
+        import torch
+
+        calls = []
+        monkeypatch.setattr(torch, "set_num_threads", calls.append)
+        TextEmbedder(isolated_settings, FixedDevice("cpu"), device="cpu", cpu_threads=3).load()
+        assert calls == [3]
+
+    def test_no_limit_by_default(self, isolated_settings, monkeypatch, stand_in_sentence_transformers):
+        import torch
+
+        calls = []
+        monkeypatch.setattr(torch, "set_num_threads", calls.append)
+        TextEmbedder(isolated_settings, FixedDevice("cpu"), device="cpu").load()
+        assert calls == []
+
+    def test_openmp_threads_do_not_spin_after_work(self):
+        import os
+
+        import app.config  # noqa: F401  (sets the default on import)
+
+        assert os.environ.get("KMP_BLOCKTIME") is not None

@@ -119,3 +119,44 @@ class TestOpenVinoCrossEncoder:
     def test_no_pairs_gives_no_scores(self):
         encoder = self.make_encoder([])
         assert encoder.predict([], batch_size=8).shape == (0,)
+
+
+class RecordingModel:
+    """Scores a pair by the length of its passage, and records what it was sent."""
+
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+
+    def predict(self, pairs, batch_size=8, show_progress_bar=False):
+        self.sent.extend(passage for _, passage in pairs)
+        return np.array([len(passage) for _, passage in pairs], dtype=np.float32)
+
+
+class TestScoringOnlyWhatIsNeeded:
+    """Duplicates are scored once and texts go shortest first; rankings stay the same."""
+
+    def make_reranker(self, isolated_settings, model):
+        reranker = CrossEncoderReranker(isolated_settings)
+        reranker._model = model
+        reranker._load_attempted = True
+        return reranker
+
+    def test_each_distinct_text_is_scored_once_shortest_first(self, isolated_settings):
+        model = RecordingModel()
+        reranker = self.make_reranker(isolated_settings, model)
+        passages = [make_passage(1, "teks yang paling panjang di sini"), make_passage(2, "pendek"),
+                    make_passage(3, "teks yang paling panjang di sini"), make_passage(4, "sedang saja")]
+
+        reranker.rerank("pertanyaan", passages, keep_count=4)
+
+        assert model.sent == ["pendek", "sedang saja", "teks yang paling panjang di sini"]
+
+    def test_duplicates_share_their_text_score_and_order_is_kept(self, isolated_settings):
+        reranker = self.make_reranker(isolated_settings, RecordingModel())
+        passages = [make_passage(1, "sedang saja"), make_passage(2, "teks yang paling panjang"),
+                    make_passage(3, "pendek"), make_passage(4, "teks yang paling panjang")]
+
+        kept = reranker.rerank("pertanyaan", passages, keep_count=3)
+
+        assert [p.chunk_id for p in kept] == [2, 4, 1]
+        assert kept[0].reranked_score == kept[1].reranked_score == len("teks yang paling panjang")

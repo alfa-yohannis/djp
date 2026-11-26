@@ -177,4 +177,5 @@ QUERY_EMBEDDER = TextEmbedder(
     device=SETTINGS.query_embedding_device,
     backend=SETTINGS.query_embedding_backend,
     openvino_directory=SETTINGS.query_embedding_openvino_directory,
+    cpu_threads=SETTINGS.query_embedding_threads,
 )

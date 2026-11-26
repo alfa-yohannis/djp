@@ -290,6 +290,10 @@ class Settings:
         #: 2.3 GB model off the 8 GB card leaves the language model all of it,
         #: which makes answers about four times faster (measured in the akreditasi sister project, evaluation_results/).
         self.query_embedding_device: str = reader.text("QUERY_EMBED_DEVICE", "cpu")
+        #: CPU threads PyTorch may use for encoding a question. All 20 cores
+        #: fought the reranker's threads; 8 encoded a question in 36-42 ms
+        #: inside the pipeline against 89 ms with 20. 0 leaves PyTorch's default.
+        self.query_embedding_threads: int = reader.integer("QUERY_EMBED_THREADS", 8)
         #: "torch" (sentence-transformers) by default. "openvino" encodes
         #: questions with an int8 copy built by `python main.py convert-embedder`;
         #: measured on 21 November 2026 it saved no RAM (2.9 GB working set
@@ -475,3 +479,10 @@ class Settings:
 SETTINGS = Settings()
 SETTINGS.create_directories()
 SETTINGS.redirect_model_cache()
+
+#: PyTorch's Intel OpenMP threads otherwise keep spinning after each piece of
+#: work, taking cores from the OpenVINO reranker in the same process. Set here,
+#: after `.env` is read (which may override it) and before torch is imported,
+#: which happens later and lazily. Measured with QUERY_EMBED_THREADS=8: question
+#: encoding 89 -> 42 ms inside the pipeline, question -> six passages 3.29 -> 3.08 s.
+os.environ.setdefault("KMP_BLOCKTIME", "0")

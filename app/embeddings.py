@@ -126,6 +126,7 @@ class TextEmbedder:
         device: str | None = None,
         backend: str = "torch",
         openvino_directory: Path | None = None,
+        cpu_threads: int = 0,
     ) -> None:
         """Record configuration without touching the GPU or downloading weights.
 
@@ -138,12 +139,16 @@ class TextEmbedder:
                 ``openvino_directory`` on the CPU (smaller and faster, for
                 questions); ``"torch"``, or an OpenVINO model that fails to
                 load, uses sentence-transformers.
+            cpu_threads: When above 0 and the model runs on the CPU through
+                PyTorch, the number of threads PyTorch may use. The server's
+                question encoder sets it so it does not fight the reranker.
         """
         self._settings = settings
         self._requested_device = device or settings.embedding_device
         self._device_resolver = device_resolver or ComputeDeviceResolver()
         self._backend = (backend or "torch").lower()
         self._openvino_directory = openvino_directory
+        self._cpu_threads = cpu_threads
         self._model = None
         self._resolved_device: str | None = None
         self._load_lock = threading.Lock()
@@ -188,6 +193,11 @@ class TextEmbedder:
             if self._backend == "openvino" and self._resolved_device == "cpu" and self._load_openvino():
                 return
             from sentence_transformers import SentenceTransformer
+
+            if self._cpu_threads > 0 and self._resolved_device == "cpu":
+                import torch
+
+                torch.set_num_threads(self._cpu_threads)
 
             LOGGER.info(
                 "Memuat model embedding %s pada %s",

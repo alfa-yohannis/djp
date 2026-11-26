@@ -71,6 +71,7 @@ tidak lagi sebanding dengan yang baru.
 | `EMBED_DEVICE` | `auto` | Perangkat untuk indexing: `auto` / `cuda` / `cpu` |
 | `QUERY_EMBED_DEVICE` | `cpu` | Perangkat untuk meng-embed pertanyaan saat melayani |
 | `QUERY_EMBED_BACKEND` | `torch` | `torch` atau `openvino` (int8; tidak menghemat RAM, lihat di bawah) |
+| `QUERY_EMBED_THREADS` | `8` | Utas CPU untuk meng-embed pertanyaan; `0` = bawaan PyTorch (semua inti) |
 | `QUERY_EMBED_OPENVINO_DIR` | `data/models/openvino/bge-m3/int8` | Lokasi model int8 pertanyaan |
 | `PRELOAD_MODELS` | `1` | Muat model pertanyaan dan reranker saat server mulai |
 | `EMBED_BATCH_SIZE` | `8` | Turunkan bila VRAM sempit |
